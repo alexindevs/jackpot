@@ -55,6 +55,17 @@ function eventLog(r, n = 6) {
   return `<pre class="log">${esc(r.log.slice(-n).map((l) => l.text).join('\n'))}</pre>`;
 }
 
+// Public chat: everyone in the room reads it; only players still in the game post.
+function publicChat(s) {
+  const r = s.room, mine = r.players[s.me];
+  const canPost = mine && !mine.removed;
+  const lines = r.pub.slice(-60).map((m) => `<div><b>${esc(nameOf(s, m.from))}</b> ${esc(m.text)}</div>`).join('') || '<div class="mute">Nothing yet.</div>';
+  return `<div class="panel pub"><h3>Public chat <span class="tag">everyone in the room reads this</span></h3>
+    <div class="chat" data-stick>${lines}</div>
+    ${canPost ? `<div class="row"><input id="pub-input" placeholder="say it to the whole room" size="24" maxlength="500" autocomplete="off"><button class="alt" data-act="pubchat">Post</button></div>`
+      : '<div class="mute sm">You can read the chat but not post.</div>'}</div>`;
+}
+
 function chatPhase(s, ui) {
   const r = s.room, g = r.game, me = s.me;
   const mine = r.players[me];
@@ -63,13 +74,13 @@ function chatPhase(s, ui) {
   return `<section class="panel">
     <div class="row between"><h2>Round ${g.round + (g.round === 0 ? 1 : 0)} starts in ${countdown(t)}</h2><button class="alt" data-act="leave">Leave</button></div>
     ${scoreboard(s)}
-    ${mine && !mine.removed ? `<div class="chat">${msgs}</div>
+    ${mine && !mine.removed ? `<h3>Team chat <span class="tag priv">only your partner sees this</span></h3><div class="chat team">${msgs}</div>
       <div class="row"><input id="chat-input" placeholder="message your partner" size="24" maxlength="500" autocomplete="off"><button data-act="chat">Send</button></div>
       <div class="row" style="margin-top:10px"><button data-act="ready" data-ready="${mine.ready ? 'false' : 'true'}">${mine.ready ? 'Not ready' : 'Ready'}</button>
         <span class="mute">${r.order.filter((id) => r.players[id].ready).length}/${r.order.filter((id) => !r.players[id].removed).length} ready. Everyone ready skips the wait.</span></div>`
       : '<p class="warn">You are watching.</p>'}
     ${eventLog(r, 4)}
-  </section>`;
+  </section>${publicChat(s)}`;
 }
 
 function revealPrompt(g, ui, r) {
@@ -104,11 +115,11 @@ function play(s, ui) {
       <div class="row">${(iHold || forced) ? g.hand.map((c, t) => (c ? `<button class="alt" data-act="pass" data-card="${t}">Pass ${CARDS[t].glyph}</button>` : '')).join('') : ''}</div>
       <div class="row" style="margin-top:8px">
         <button data-act="proclaim" ${canAct && !revoked && !partnerHolds ? '' : 'disabled'}>Jackpot for ${esc(nameOf(s, partner))}!</button>
-        <button class="alt" data-act="vote-end" data-agree="true">Vote to end</button>
+        ${(() => { const yes = Object.values(g.votes).filter(Boolean).length; return `<button class="${g.votes[me] ? '' : 'alt'}" data-act="vote-end" data-agree="${g.votes[me] ? 'false' : 'true'}">${g.votes[me] ? 'Withdraw vote to end' : 'Vote to end'}</button><span class="mute sm">${yes} voted to end</span>`; })()}
         ${revoked ? '<span class="bad sm">no proclaims left this round</span>' : partnerHolds ? '<span class="mute sm">your partner holds the passing card</span>' : ''}
       </div>`}
     ${eventLog(r)}
-  </section>`;
+  </section>${publicChat(s)}`;
 }
 
 function over(s) {
@@ -121,7 +132,7 @@ function over(s) {
     ${res.countsForStats === false ? '<p class="mute">This game does not count for the leaderboards.</p>' : ''}
     ${eventLog(r, 5)}
     <button data-act="leave">Back to rooms</button>
-  </section>`;
+  </section>${publicChat(s)}`;
 }
 
 export function table(s, ui) {

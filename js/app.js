@@ -20,7 +20,7 @@ const ERRORS = {
   self_suspect: "You can't suspect yourself.", busy: 'Someone is already answering a suspicion.', bad_reveal: 'That is not a valid answer.',
   proclaim_revoked: 'You lost the right to proclaim this round.', partner_holds_passing_card: 'Your partner holds the passing card.',
   game_over: 'The game is over.', nothing_to_answer: 'Nothing to answer.', bad_text: 'That message cannot be sent.',
-  rate_limited: 'Slow down a little.', closed: 'Not connected.', timeout: 'The server did not answer.',
+  slow_down: 'Slow down a little.', rate_limited: 'Slow down a little.', closed: 'Not connected.', timeout: 'The server did not answer.',
 };
 
 let state = initial();
@@ -44,6 +44,7 @@ function act(type, fields) {
 
 net.addEventListener('status', (e) => {
   ui.status = e.detail.status;
+  syncChatPoll();
   if (e.detail.status === 'closed') {
     if (e.detail.code === 4409) { ui.blocked = true; ui.notice = 'This account is open in another tab or window. Close the other one, then reload.'; }
     if (e.detail.code === 4401) { clearSession(); session = null; ui.notice = 'Your sign-in expired or was refused. Please sign in again.'; }
@@ -59,6 +60,27 @@ net.addEventListener('message', (e) => {
   if (e.detail.t === 'game_event' && (e.detail.kind === 'suspicion_failed' || e.detail.kind === 'suspicion_freed')) ui.sel = [];
   render();
 });
+
+// While the socket is down, catch up on the public chat over REST once a minute (players only, needs the database).
+let chatPoll = null, chatPollOff = false;
+function restBase() {
+  try { const u = new URL(net.url); u.protocol = u.protocol === 'wss:' ? 'https:' : 'http:'; return u.origin; } catch { return null; }
+}
+async function pollChat() {
+  const room = state.room;
+  if (!room || !session || chatPollOff || !restBase()) return;
+  try {
+    const r = await fetch(`${restBase()}/api/rooms/${encodeURIComponent(room.id)}/chat?after=${room.lastPubId}&limit=200`, { headers: { Authorization: 'Bearer ' + session } });
+    if (r.status === 503 || r.status === 403 || r.status === 401) { chatPollOff = true; return; } // no database, not a player, or signed out: nothing to poll
+    if (!r.ok) return;
+    const lines = await r.json();
+    if (lines.length) { state = reduce(state, { t: '_chat_poll', d: { lines } }); render(); }
+  } catch { /* still offline; try again next minute */ }
+}
+function syncChatPoll() {
+  if (net.status !== 'open' && state.room && !chatPoll) chatPoll = setInterval(pollChat, 60000);
+  if ((net.status === 'open' || !state.room) && chatPoll) { clearInterval(chatPoll); chatPoll = null; }
+}
 
 function pollRooms() {
   if (net.status === 'open' && state.me && !state.room) net.request('list_rooms').catch(() => {});
@@ -79,6 +101,7 @@ function render() {
   const a = document.activeElement;
   const keep = a && a.id && root.contains(a) ? { id: a.id, value: a.value, start: a.selectionStart, end: a.selectionEnd } : null;
   root.innerHTML = screens.header(state, ui) + view();
+  root.querySelectorAll('[data-stick]').forEach((el) => { el.scrollTop = el.scrollHeight; });
   if (keep) {
     const el = document.getElementById(keep.id);
     if (el) { el.value = keep.value; el.focus(); try { el.setSelectionRange(keep.start, keep.end); } catch { /* not a text field */ } }
@@ -109,6 +132,7 @@ root.addEventListener('click', (e) => {
     case 'proclaim': act('proclaim'); break;
     case 'vote-end': act('vote_end', { agree: d.agree === 'true' }); break;
     case 'ready': act('ready', { ready: d.ready === 'true' }); break;
+    case 'pubchat': { const v = val('pub-input'); if (v) { act('chat', { text: v }).then((m) => { if (m) document.getElementById('pub-input').value = ''; }); } break; }
     case 'chat': { const v = val('chat-input'); if (v) { act('team_chat', { text: v }); document.getElementById('chat-input').value = ''; } break; }
     case 'reveal-toggle': {
       const c = +d.card;
@@ -138,5 +162,5 @@ async function boot() {
   if (token()) net.connect();
   render();
 }
-if (dev) window.__jackpot = { get state() { return state; } }; // read-only view for tests, dev sign-in only
+if (dev) window.__jackpot = { get state() { return state; }, get net() { return net; } }; // read-only view for tests, dev sign-in only
 boot();

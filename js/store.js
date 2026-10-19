@@ -23,7 +23,7 @@ export const nameOf = (s, id) => (s.profiles[id] && s.profiles[id].name) || id;
 function newRoom(id) {
   return {
     id, creator: null, phase: 'lobby', players: {}, order: [], spectators: 0,
-    timers: [], countdownEndsAt: null, chat: [], log: [], game: null,
+    timers: [], countdownEndsAt: null, chat: [], pub: [], lastPubId: 0, log: [], game: null,
   };
 }
 
@@ -31,7 +31,7 @@ function newGame() {
   return {
     round: 0, phase: 'waiting', holder: '', seats: [], wins: {}, points: {}, suspicionPoints: 3, winsToFinish: 7,
     hand: [0, 0, 0, 0], hands: {}, pendingReveals: [], forcedPass: '',
-    reveal: null, result: null, proclaimRevoked: {}, lastReveal: null,
+    reveal: null, result: null, votes: {}, proclaimRevoked: {}, lastReveal: null,
   };
 }
 
@@ -48,6 +48,8 @@ function fromSnapshot(s, d) {
   r.phase = d.phase;
   r.spectators = d.spectators;
   for (const p of d.players) { r.players[p.id] = p; r.order.push(p.id); }
+  r.pub = (d.chat || []).map((m) => ({ id: m.id, from: m.from, text: m.text, at: m.at }));
+  r.lastPubId = r.pub.reduce((a, m) => Math.max(a, m.id), 0);
   r.timers = d.timers.map((t) => ({ kind: t.kind, player: t.player, endsAt: when(s, t.endsAt) }));
   const cd = r.timers.find((t) => t.kind === 'countdown');
   if (cd) r.countdownEndsAt = cd.endsAt;
@@ -60,6 +62,13 @@ function fromSnapshot(s, d) {
     };
   }
   return r;
+}
+
+function addPublic(r, m) {
+  if (m.id <= r.lastPubId) return; // already seen (live line vs. polled line)
+  r.pub.push({ id: m.id, from: m.from, text: m.text, at: m.at });
+  r.lastPubId = m.id;
+  if (r.pub.length > 300) r.pub.shift();
 }
 
 export function reduce(prev, msg) {
@@ -83,6 +92,9 @@ export function reduce(prev, msg) {
       s.closed = d.reason;
       s.room = null;
       s.invites = { partner: [], room: [] };
+      break;
+    case '_chat_poll': // lines from the REST fallback: {id, text, at, player:{id,name,style}}
+      if (s.room) for (const l of d.lines) { s.profiles[l.player.id] = l.player; addPublic(s.room, { id: l.id, from: l.player.id, text: l.text, at: l.at }); }
       break;
     case 'room_invite': s.invites.room.push(d); break;
     case 'partner_invite': s.invites.partner.push(d); break;
@@ -147,6 +159,7 @@ function reduceRoom(s, t, d) {
       if (r.game) { r.game.phase = 'waiting'; r.game.round = d.round; }
       say(s, 'team chat before round ' + d.round);
       break;
+    case 'chat_message': addPublic(r, d); break;
     case 'ready_changed': if (r.players[d.player]) r.players[d.player].ready = d.ready; break;
     case 'team_chat_message': r.chat.push({ from: d.from, text: d.text }); break;
     case 'hand_update':
@@ -230,7 +243,7 @@ function reduceEvent(s, kind, d) {
       for (const id of d.members) if (r.players[id]) r.players[id].removed = true;
       say(s, 'team ' + d.team + ' removed');
       break;
-    case 'vote_changed': say(s, n(d.player) + ' votes ' + (d.agree ? 'to end' : 'to continue')); break;
+    case 'vote_changed': g.votes[d.player] = d.agree; say(s, n(d.player) + ' votes ' + (d.agree ? 'to end' : 'to continue')); break;
     case 'game_over':
       g.phase = 'over'; g.result = d.result; r.phase = 'over';
       r.timers = [];
