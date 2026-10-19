@@ -2,7 +2,7 @@
 import { LETTERS } from './config.js';
 
 export const initial = () => ({
-  me: null, offset: 0, profiles: {}, rooms: [], room: null, closed: null,
+  me: null, offset: 0, gestures: [], profiles: {}, rooms: [], room: null, closed: null,
   invites: { partner: [], room: [] },
 });
 
@@ -23,7 +23,7 @@ export const nameOf = (s, id) => (s.profiles[id] && s.profiles[id].name) || id;
 function newRoom(id) {
   return {
     id, creator: null, phase: 'lobby', players: {}, order: [], spectators: 0,
-    timers: [], countdownEndsAt: null, chat: [], pub: [], lastPubId: 0, seq: 0, log: [], game: null,
+    timers: [], countdownEndsAt: null, chat: [], pub: [], lastPubId: 0, seq: 0, signals: [], log: [], game: null,
   };
 }
 
@@ -65,6 +65,14 @@ function fromSnapshot(s, d) {
   return r;
 }
 
+// A gesture someone made. scope: 'team' (only the sender's partner saw it), 'room', or '' for your own (you are not told).
+function addSignal(r, s, d, num, history) {
+  if (num !== undefined && r.signals.some((x) => x.s === num)) return; // already shown
+  const g = s.gestures.find((x) => x.id === d.gesture);
+  r.signals.push({ s: num, from: d.from, scope: d.scope || '', text: g ? g.seen : d.gesture, history });
+  if (r.signals.length > 100) r.signals.shift();
+}
+
 function addPublic(r, m) {
   if (m.id <= r.lastPubId) return; // already seen (live line vs. polled line)
   r.pub.push({ id: m.id, from: m.from, text: m.text, at: m.at });
@@ -87,6 +95,8 @@ export function applyMissed(prev, d) {
     for (const m of sr.pub) if (!known.has(m.id)) r.pub.push(m);
     r.pub.sort((a, b) => a.id - b.id);
     r.lastPubId = Math.max(r.lastPubId, sr.lastPubId);
+    for (const x of sr.signals) if (!r.signals.some((y) => y.s === x.s)) r.signals.push({ ...x, history: true });
+    r.signals.sort((a, b) => (a.s || 0) - (b.s || 0));
     r.chat = sr.chat; // the private team chat is not in a snapshot, only in the history
     r.log = sr.log.slice(prev.room.log.length).map((l) => ({ text: '(missed) ' + l.text })).concat(r.log);
   }
@@ -107,9 +117,21 @@ export function reduce(prev, msg) {
     case 'profile': s.profiles[d.id] = d; break;
     case 'rooms': s.rooms = d; break;
     case 'snapshot':
-      s.room = fromSnapshot(s, d);
+      if (d.gestures && d.gestures.length) s.gestures = d.gestures;
+      {
+        const before = s.room && s.room.id === d.room ? s.room : null; // a reconnect to the room we were already in
+        s.room = fromSnapshot(s, d);
+        if (before) {
+          // a snapshot only describes the present: keep what we had already seen
+          s.room.chat = before.chat;
+          s.room.signals = before.signals;
+          s.room.log = before.log;
+          const have = new Set(s.room.pub.map((m) => m.id));
+          s.room.pub = before.pub.filter((m) => !have.has(m.id)).concat(s.room.pub);
+          s.room.lastPubId = Math.max(s.room.lastPubId, before.lastPubId);
+        } else say(s, 'joined room ' + d.room);
+      }
       s.closed = null;
-      say(s, 'joined room ' + d.room);
       break;
     case 'room_closed':
       s.closed = d.reason;
@@ -123,12 +145,12 @@ export function reduce(prev, msg) {
     case 'partner_invite': s.invites.partner.push(d); break;
     case 'game_event': return reduceEvent(s, msg.kind, d);
     default:
-      if (s.room) reduceRoom(s, msg.t, d);
+      if (s.room) reduceRoom(s, msg.t, d, msg.s);
   }
   return s;
 }
 
-function reduceRoom(s, t, d) {
+function reduceRoom(s, t, d, num) {
   const r = s.room;
   switch (t) {
     case 'member_joined':
@@ -183,6 +205,7 @@ function reduceRoom(s, t, d) {
       say(s, 'team chat before round ' + d.round);
       break;
     case 'chat_message': addPublic(r, d); break;
+    case 'signal': addSignal(r, s, d, num, false); break;
     case 'ready_changed': if (r.players[d.player]) r.players[d.player].ready = d.ready; break;
     case 'team_chat_message': r.chat.push({ from: d.from, text: d.text }); break;
     case 'hand_update':

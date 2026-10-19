@@ -92,6 +92,16 @@ function revealPrompt(g, ui, r) {
     <button data-act="reveal-send" ${sel.length === g.reveal.required ? '' : 'disabled'}>Show</button></div></div>`;
 }
 
+// What people have signalled. Team-only ones are marked: you (the partner) saw them and opponents did not.
+function signalFeed(s) {
+  const r = s.room;
+  const items = r.signals.slice(-8).map((x) => {
+    const who = x.from === s.me ? 'You' : esc(nameOf(s, x.from));
+    return `<div class="sig${x.scope === 'team' ? ' team' : ''}${x.history ? ' hist' : ''}">${x.scope === 'team' ? '<span title="Only you saw this. The other team did not.">🔒</span> ' : ''}<b>${who}</b> ${esc(x.text)}${x.history ? ' <span class="mute sm">(earlier)</span>' : ''}</div>`;
+  }).join('');
+  return `<div class="feed"><div class="mute sm">Signals${r.signals.some((x) => x.scope === 'team') ? ' (🔒 = only you saw it)' : ''}</div>${items || '<div class="mute sm">None yet.</div>'}</div>`;
+}
+
 function play(s, ui) {
   const r = s.room, g = r.game, me = s.me;
   const mine = r.players[me];
@@ -111,10 +121,12 @@ function play(s, ui) {
     ${hold && g.holder ? `<p class="center">${esc(nameOf(s, g.holder))} must pass within ${countdown(hold)}</p>` : ''}
     ${forced ? `<div class="prompt"><b>You were caught.</b> Pass a card first ${countdown(timerOf(r, 'forced', me))}</div>` : ''}
     ${revealPrompt(g, ui, r)}
+    ${signalFeed(s)}
     ${spectator ? '' : `<div class="hand">${handHtml(g.hand)}</div>
       <div class="row">${(iHold || forced) ? g.hand.map((c, t) => (c ? `<button class="alt" data-act="pass" data-card="${t}">Pass ${CARDS[t].glyph}</button>` : '')).join('') : ''}</div>
       <div class="row" style="margin-top:8px">
         <button data-act="proclaim" ${canAct && !revoked && !partnerHolds ? '' : 'disabled'}>Jackpot for ${esc(nameOf(s, partner))}!</button>
+        <button class="alt" data-act="signal-palette" ${canAct ? '' : 'disabled'}>Signal</button>
         ${(() => { const yes = Object.values(g.votes).filter(Boolean).length; return `<button class="${g.votes[me] ? '' : 'alt'}" data-act="vote-end" data-agree="${g.votes[me] ? 'false' : 'true'}">${g.votes[me] ? 'Withdraw vote to end' : 'Vote to end'}</button><span class="mute sm">${yes} voted to end</span>`; })()}
         ${revoked ? '<span class="bad sm">no proclaims left this round</span>' : partnerHolds ? '<span class="mute sm">your partner holds the passing card</span>' : ''}
       </div>`}

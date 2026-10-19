@@ -46,3 +46,8 @@ h3 { margin:8px 0 4px; font-size:14px; }
 .modal-body ul { padding-left:20px; }
 .modal-body .g { display:inline-block; font-size:18px; padding:0 4px; }
 .modal-foot { padding:10px 16px 14px; text-align:right; border-top:1px solid #232733; }
+.gestures { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; }
+.gestures button { font-size:13px; padding:4px 8px; }
+.feed { background:#0b0d11; border-radius:8px; padding:6px 10px; margin:8px 0; font-size:13px; }
+.sig.team { color:var(--warn); }
+.sig.hist { opacity:.65; }

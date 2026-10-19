@@ -22,7 +22,7 @@ const BODY = `
 
   <h3>Telling your partner</h3>
   <p>Before every round your team gets a <b>private 2-minute chat</b>. Agree a secret signal there. Use a new one each round, because the other teams are watching. Once the round starts, the only private line is whatever signal you can slip past everyone. Everyone clicking <b>Ready</b> skips the wait. The public chat is open to the whole room, so anything you post there can be read by your opponents too.</p>
-  <p class="mute">Signal gestures are coming soon. Until then the public chat is the only way to signal, and everyone can read it.</p>
+  <p>Once the round is running, press <b>Signal</b> and pick one of about 200 ordinary gestures, like a blink, a sneeze or a phrase. Your partner always sees it. About one in five are seen <b>only</b> by your partner. The rest are seen by the whole table, and you're never told which was which. Fake signals are allowed, so bluff.</p>
 
   <h3>Suspicion</h3>
   <ul>
