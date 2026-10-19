@@ -29,7 +29,7 @@ function newRoom(id) {
 
 function newGame() {
   return {
-    round: 0, phase: 'waiting', holder: '', seats: [], wins: {}, points: {},
+    round: 0, phase: 'waiting', holder: '', seats: [], wins: {}, points: {}, suspicionPoints: 3, winsToFinish: 7,
     hand: [0, 0, 0, 0], hands: {}, pendingReveals: [], forcedPass: '',
     reveal: null, result: null, proclaimRevoked: {}, lastReveal: null,
   };
@@ -82,7 +82,10 @@ export function reduce(prev, msg) {
     case 'room_closed':
       s.closed = d.reason;
       s.room = null;
+      s.invites = { partner: [], room: [] };
       break;
+    case 'room_invite': s.invites.room.push(d); break;
+    case 'partner_invite': s.invites.partner.push(d); break;
     case 'game_event': return reduceEvent(s, msg.kind, d);
     default:
       if (s.room) reduceRoom(s, msg.t, d);
@@ -102,8 +105,6 @@ function reduceRoom(s, t, d) {
       else if (r.players[d.player]) r.players[d.player].removed = true;
       say(s, nameOf(s, d.player) + ' left (' + d.reason + ')');
       break;
-    case 'room_invite': s.invites.room.push(d); break;
-    case 'partner_invite': s.invites.partner.push(d); break;
     case 'partner_declined': say(s, nameOf(s, d.by) + ' declined your partner invite'); break;
     case 'team_formed':
       for (const [a, b] of [[d.a, d.b], [d.b, d.a]]) if (r.players[a]) r.players[a].partner = b;
@@ -120,15 +121,18 @@ function reduceRoom(s, t, d) {
       break;
     case 'countdown_cancelled': r.countdownEndsAt = null; dropTimers(r, 'countdown'); break;
     case 'game_starting': {
-      r.phase = 'playing';
+      r.phase = 'chat';
       r.countdownEndsAt = null;
       dropTimers(r, 'countdown');
       s.invites = { partner: [], room: [] };
       const g = newGame();
       d.teams.forEach((pair, i) => pair.forEach((id) => {
         if (r.players[id]) { r.players[id].team = i; r.players[id].partner = pair.find((x) => x !== id); }
-        g.points[id] = 3;
+        g.points[id] = d.suspicionPoints;
       }));
+      g.seats = d.seats || [];
+      g.suspicionPoints = d.suspicionPoints;
+      g.winsToFinish = d.winsToFinish;
       d.teams.forEach((_, i) => (g.wins[i] = 0));
       d.demoted.forEach((id) => { if (r.players[id]) r.players[id].removed = true; });
       r.game = g;
@@ -139,6 +143,7 @@ function reduceRoom(s, t, d) {
       dropTimers(r, 'hold'); dropTimers(r, 'chat');
       for (const p of Object.values(r.players)) p.ready = false;
       setTimer(r, { kind: 'chat', player: '', endsAt: when(s, d.endsAt) });
+      r.phase = 'chat';
       if (r.game) { r.game.phase = 'waiting'; r.game.round = d.round; }
       say(s, 'team chat before round ' + d.round);
       break;
@@ -169,7 +174,8 @@ function reduceEvent(s, kind, d) {
     case 'round_started':
       g.round = d.round; g.holder = d.holder; g.phase = 'playing'; g.reveal = null; g.forcedPass = '';
       g.pendingReveals = []; g.proclaimRevoked = {};
-      for (const id of Object.keys(g.points)) g.points[id] = 3;
+      for (const id of Object.keys(g.points)) g.points[id] = g.suspicionPoints;
+      r.phase = 'playing';
       dropTimers(r, 'chat');
       say(s, 'round ' + d.round + ' started, ' + n(d.holder) + ' holds the passing card');
       break;
