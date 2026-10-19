@@ -25,20 +25,34 @@ const ERRORS = {
 
 // An invite link looks like https://jackpot.start.ng/?room=abc123. Remember the room (it has to survive the
 // sign-in round trip), then join it as soon as we are connected.
+let guestArrival = false;
 function takeInvite() {
   try {
     const q = new URLSearchParams(location.search);
     const room = q.get('room');
+    guestArrival = q.has('guest'); // start.ng opens a game with ?guest when the player chose to play as a guest
     if (room) {
-      sessionStorage.setItem('pending_room', room);
+      rememberRoom(room);
       q.delete('room');
       history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash);
     }
   } catch { /* storage unavailable: the link just opens the room list */ }
 }
 takeInvite();
-const pendingRoom = () => { try { return sessionStorage.getItem('pending_room'); } catch { return null; } };
-const clearPendingRoom = () => { try { sessionStorage.removeItem('pending_room'); } catch { /* ignore */ } };
+const HOUR = 60 * 60 * 1000;
+function rememberRoom(room) {
+  try { sessionStorage.setItem('pending_room', room); } catch { /* ignore */ }
+  try { localStorage.setItem('pending_room', JSON.stringify({ room, at: Date.now() })); } catch { /* ignore */ }
+}
+function pendingRoom() {
+  try { const r = sessionStorage.getItem('pending_room'); if (r) return r; } catch { /* ignore */ }
+  try { const o = JSON.parse(localStorage.getItem('pending_room') || 'null'); if (o && Date.now() - o.at < HOUR) return o.room; } catch { /* ignore */ }
+  return null;
+}
+function clearPendingRoom() {
+  try { sessionStorage.removeItem('pending_room'); } catch { /* ignore */ }
+  try { localStorage.removeItem('pending_room'); } catch { /* ignore */ }
+}
 
 function inviteLink(roomId) {
   const q = new URLSearchParams();
@@ -49,7 +63,7 @@ function inviteLink(roomId) {
 }
 
 let state = initial();
-const ui = { inviteLink, sel: [], status: 'closed', identity: null, notice: null, blocked: false, signInUrl: signInUrl() };
+const ui = { inviteLink, guest: guestArrival, pendingRoom, inviteNotice: null, retryIn: 0, sel: [], status: 'closed', identity: null, notice: null, blocked: false, signInUrl: signInUrl() };
 const dev = devName();
 let session = dev ? null : readSession();
 const token = () => (dev ? 'dev:' + dev : session);
@@ -94,6 +108,8 @@ function act(type, fields) {
 
 net.addEventListener('status', (e) => {
   ui.status = e.detail.status;
+  if (e.detail.status === 'waiting') ui.retryIn = e.detail.retryIn;
+  if (e.detail.status === 'open') ui.inviteNotice = ui.inviteNotice; // unchanged
   syncChatPoll();
   if (e.detail.status === 'closed') {
     if (e.detail.code === 4409) { ui.blocked = true; ui.notice = 'This account is open in another tab or window. Close the other one, then reload.'; }
@@ -142,8 +158,20 @@ function syncChatPoll() {
 function tryPendingJoin() {
   const room = pendingRoom();
   if (!room || net.status !== 'open' || !state.me || state.room) return;
-  clearPendingRoom(); // one attempt, so a refused link never loops
-  act('join', { room }).then((m) => { if (!m) toast('Could not join room ' + room); });
+  // Only a real answer from the server uses the link up. If the connection dropped meanwhile, keep it for the retry.
+  net.request('join', { room }).then(clearPendingRoom, (e) => {
+    const definitive = ['room_full', 'not_joinable', 'no_such_room', 'already_in_room', 'not_player', 'room_closed'].includes(e.code);
+    if (!definitive) return;
+    clearPendingRoom();
+    ui.inviteNotice = {
+      room,
+      text: e.code === 'not_joinable' ? 'That game has already started. You can watch it instead.'
+        : e.code === 'room_full' ? 'That room is full.'
+        : e.code === 'already_in_room' ? '' : 'That room no longer exists.',
+      canWatch: e.code === 'not_joinable' || e.code === 'room_full',
+    };
+    render();
+  });
 }
 
 function pollRooms() {
@@ -154,7 +182,7 @@ setInterval(pollRooms, 4000);
 function view() {
   if (ui.blocked) return `<section class="panel center"><h2>Opened elsewhere</h2><p class="warn">${ui.notice}</p><button data-act="reload">Reload</button></section>`;
   if (!token()) return screens.signIn(ui);
-  if (!state.me) return '<section class="panel center"><p class="mute">Connecting…</p></section>';
+  if (!state.me) return screens.connecting(ui);
   if (!state.room) return screens.rooms(state, ui);
   if (state.room.phase === 'lobby') return screens.lobby(state, ui);
   return table(state, ui);
@@ -180,6 +208,8 @@ root.addEventListener('click', (e) => {
   const d = b.dataset;
   switch (d.act) {
     case 'reload': location.reload(); break;
+    case 'watch-invited': { const room = ui.inviteNotice && ui.inviteNotice.room; ui.inviteNotice = null; if (room) act('spectate', { room }); render(); break; }
+    case 'dismiss-notice': ui.inviteNotice = null; render(); break;
     case 'copy-link': {
       const link = inviteLink(state.room.id);
       (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(
@@ -222,16 +252,13 @@ setInterval(() => {
   root.querySelectorAll('[data-countdown]').forEach((el) => { el.textContent = clock(+el.dataset.countdown - Date.now()); });
 }, 500);
 
-async function boot() {
+function boot() {
   render();
+  if (token()) net.connect(); // do not wait for start.ng's identity iframe: it only fills in the profile card
   if (dev) ui.identity = { name: dev, account: 'dev' };
   else {
-    try {
-      const w = await connectPage().whoami();
-      ui.identity = w.user || w.guest || null;
-    } catch { /* the page still works without the connect iframe */ }
+    connectPage().whoami().then((w) => { ui.identity = w.user || w.guest || null; render(); }, () => { /* works without the iframe */ });
   }
-  if (token()) net.connect();
   render();
 }
 if (dev) window.__jackpot = { get state() { return state; }, get net() { return net; }, get lastS() { return lastS; } }; // read-only view for tests, dev sign-in only

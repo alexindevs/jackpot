@@ -5,11 +5,22 @@ import { nameOf } from '../store.js';
 const who = (s, id) => `<span class="who">${avatar((s.profiles[id] || {}).style, 28)}<span>${esc(nameOf(s, id))}</span></span>`;
 
 export function signIn(ui) {
+  const room = ui.pendingRoom();
   return `<section class="panel center">
-    <h2>Sign in to play</h2>
-    <p class="mute">Jackpot needs a start.ng account. Guests can watch the lobby but can't join games.</p>
-    <a class="btn" href="${esc(ui.signInUrl)}">Sign in with start.ng</a>
+    <h2>${room ? "You've been invited to a game" : 'Sign in to play'}</h2>
+    ${room ? `<p>Room <b>${esc(room)}</b> is waiting for you.</p>` : ''}
+    ${ui.guest ? '<p class="warn">Guests can look around start.ng but can\'t play Jackpot. Sign in with a start.ng account to continue.</p>'
+      : '<p class="mute">Jackpot needs a start.ng account.</p>'}
+    <a class="btn" href="${esc(ui.signInUrl)}">${room ? 'Sign in and join the room' : 'Sign in with start.ng'}</a>
+    <p class="mute sm">Signing in happens on start.ng. You'll come straight back here${room ? ' and join the room' : ''}. If you come back some other way, open the invite link again.</p>
     ${ui.notice ? `<p class="warn">${esc(ui.notice)}</p>` : ''}
+  </section>`;
+}
+
+export function connecting(ui) {
+  const slow = ui.status === 'waiting';
+  return `<section class="panel center">
+    <p class="mute">${slow ? "Can't reach the game server yet. It may be waking up, so this can take a minute. Trying again in a few seconds…" : 'Connecting…'}</p>
   </section>`;
 }
 
@@ -27,6 +38,8 @@ export function rooms(s, ui) {
   return `<section class="panel">
     <div class="row between"><h2>Rooms</h2><div class="row"><button data-act="create">Create room</button><button class="alt" data-act="refresh">Refresh</button></div></div>
     ${s.closed ? `<p class="warn">Your last room closed (${esc(s.closed)}).</p>` : ''}
+    ${ui.inviteNotice && ui.inviteNotice.text ? `<div class="prompt"><div>${esc(ui.inviteNotice.text)}</div><div class="row" style="margin-top:6px">
+      ${ui.inviteNotice.canWatch ? '<button data-act="watch-invited">Watch</button>' : ''}<button class="alt" data-act="dismiss-notice">Dismiss</button></div></div>` : ''}
     ${invites}
     ${list}
     <div class="row" style="margin-top:12px"><input id="join-code" placeholder="room code" size="10" autocomplete="off"><button class="alt" data-act="join-code">Join by code</button></div>
