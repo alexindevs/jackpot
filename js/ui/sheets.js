@@ -124,7 +124,7 @@ export function popup(html, cls = '') {
   el.className = 'pop ' + cls;
   el.innerHTML = html;
   box.append(el);
-  while (box.children.length > 3) box.firstChild.remove();
+  while (box.children.length > 2) box.firstChild.remove();
   setTimeout(() => el.remove(), 3600);
 }
 

@@ -99,7 +99,7 @@ body.sheet-open .controls > :not(.prompt) { display:none; }
 .menu { display:flex; flex-direction:column; gap:10px; padding-bottom:8px; }
 
 /* ---- popups, banners and the end of the game ---- */
-#popups { position:fixed; top:42%; left:50%; transform:translate(-50%,-50%); width:min(92vw, 420px); display:flex; flex-direction:column; align-items:center; gap:6px; z-index:60; pointer-events:none; }
+#popups { position:fixed; top:27%; left:50%; transform:translateX(-50%); width:min(92vw, 420px); display:flex; flex-direction:column; align-items:center; gap:6px; z-index:60; pointer-events:none; }
 .pop { background:#222733; padding:8px 12px; border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,.5); animation:pop .2s ease-out; }
 .pop.warn, .pop.private { border-left:3px solid var(--warn); }
 .pop.bad { border-left:3px solid var(--bad); }
