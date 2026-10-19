@@ -202,7 +202,7 @@
     var u = new URL(url);
     var isLocal = u.hostname === 'localhost' || u.hostname === '127.0.0.1';
     var token = mode === 'bad' ? 'nonsense' : (isLocal ? 'dev:probe' : session);
-    say('mode ' + mode + ', origin ' + location.origin);
+    say('mode ' + mode + ', page origin ' + location.origin + ', url ' + url);
     if (mode === 'real' && !token) { tag('ws', 'warn', 'need session'); say('No start.ng session available. Use "Sign in to get a session" first.'); return; }
     var opened = false, ws, msgs = 0;
     try { ws = new WebSocket(url); } catch (err) { tag('ws', 'bad', 'blocked'); say('Constructor threw: ' + err.message); return; }
@@ -222,6 +222,12 @@
       if (!opened) {
         tag('ws', 'bad', 'never opened');
         say(violations.length ? 'A CSP violation was logged below, so the policy blocked it.' : 'No CSP violation was logged, so the cause is more likely network, TLS, origin check, or the server.');
+        // Is the host reachable at all? A no-cors fetch cannot read the answer but tells us whether the connection worked.
+        var http = url.replace(/^ws/, 'http').replace(/\/ws[^/]*$/, '') + '/healthz';
+        fetch(http, { mode: 'no-cors', cache: 'no-store' }).then(
+          function () { say('GET ' + http + ' reached the server (answer hidden by the browser). The host is up and TLS works, so the WebSocket upgrade itself was refused: check the allowed origins and the path.'); },
+          function (err) { say('GET ' + http + ' also failed (' + err.message + '). The host is unreachable from this browser: asleep, wrong address, blocked by an extension or a network filter.'); }
+        );
       }
     };
   }
