@@ -86,6 +86,14 @@ export class Net extends EventTarget {
     };
   }
 
+  // Called when the tab becomes visible again or the network comes back. A sleeping tab or phone can lose the socket
+  // without the page noticing, and its timers run late, so do not wait for the watchdog or a long backoff.
+  checkNow() {
+    if (this.stopped) return;
+    if (this.status === 'waiting') { clearTimeout(this.timer); this.retries = 0; this.connect(); return; }
+    if (this.open && Date.now() - this.lastRx > 30000) this.ws.close(4000, 'stale'); // the server speaks at least every 20s
+  }
+
   close() {
     this.stopped = true;
     clearTimeout(this.timer);

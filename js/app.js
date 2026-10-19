@@ -115,6 +115,11 @@ function act(type, fields) {
   return net.request(type, fields).catch((e) => toast(ERRORS[e.code] || e.message));
 }
 
+// back on the tab, or the network is back: make sure the connection is really alive
+document.addEventListener('visibilitychange', () => { if (!document.hidden) net.checkNow(); });
+window.addEventListener('online', () => net.checkNow());
+window.addEventListener('focus', () => net.checkNow());
+
 net.addEventListener('status', (e) => {
   ui.status = e.detail.status;
   if (e.detail.status === 'waiting') ui.retryIn = e.detail.retryIn;
