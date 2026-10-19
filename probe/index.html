@@ -54,7 +54,9 @@
     <h2>3. WebSocket to our own domain <span id="t-ws" class="tag mute">pending</span></h2>
     <div class="row">
       <input id="wsurl" placeholder="wss://your-backend.example/ws" autocomplete="off">
-      <button id="wsgo">Test</button>
+      <button id="wsgo">Test with my session</button>
+      <button id="wsbad" class="alt">Bad token</button>
+      <button id="wssilent" class="alt">Silent socket</button>
     </div>
     <pre id="o-ws">Enter the backend wss:// URL (or open this page with ?server=wss://…). Dev token is only used if the URL host is localhost.</pre>
   </section>
@@ -189,35 +191,43 @@
   var qs = new URLSearchParams(location.search);
   if (qs.get('server') || qs.get('ws')) $('wsurl').value = qs.get('server') || qs.get('ws');
 
-  $('wsgo').addEventListener('click', function () {
+  // mode: 'real' (auth with the start.ng session, stay open ~50s to see heartbeats), 'bad' (nonsense token),
+  // 'silent' (send nothing). Every line carries milliseconds since the socket was created.
+  function runWs(mode) {
     var url = $('wsurl').value.trim();
     if (!/^wss?:\/\//.test(url)) { out('ws', 'Enter a ws:// or wss:// URL.'); return; }
-    var log = [];
-    function say(s) { log.push(s); out('ws', log.join('\n')); }
+    var log = [], t0 = performance.now();
+    function say(s) { log.push('+' + Math.round(performance.now() - t0) + 'ms ' + s); out('ws', log.join('\n')); }
     tag('ws', 'warn', 'connecting');
     var u = new URL(url);
     var isLocal = u.hostname === 'localhost' || u.hostname === '127.0.0.1';
-    var token = isLocal ? 'dev:probe' : session;
-    if (!token) { tag('ws', 'warn', 'need session'); say('No start.ng session available to authenticate with. Sign in first (the open/close alone still shows whether the browser may connect).'); }
-    var opened = false, ws;
+    var token = mode === 'bad' ? 'nonsense' : (isLocal ? 'dev:probe' : session);
+    say('mode ' + mode + ', origin ' + location.origin);
+    if (mode === 'real' && !token) { tag('ws', 'warn', 'need session'); say('No start.ng session available. Use "Sign in to get a session" first.'); return; }
+    var opened = false, ws, msgs = 0;
     try { ws = new WebSocket(url); } catch (err) { tag('ws', 'bad', 'blocked'); say('Constructor threw: ' + err.message); return; }
+    var limit = mode === 'real' ? 50000 : 20000;
+    var giveUp = setTimeout(function () { say('still open after ' + limit / 1000 + 's, closing it myself'); tag('ws', mode === 'silent' || mode === 'bad' ? 'bad' : 'ok', 'open ' + limit / 1000 + 's'); try { ws.close(1000); } catch (x) {} }, limit);
     ws.onopen = function () {
       opened = true;
       tag('ws', 'ok', 'connected');
-      say('Connection opened: the browser is allowed to reach this origin from here.');
-      if (token) { say('Sending auth message…'); ws.send(JSON.stringify({ type: 'auth', token: token })); }
-      setTimeout(function () { try { ws.close(1000); } catch (x) {} }, 4000);
+      say('open: the browser may reach this server from here');
+      if (mode !== 'silent') { say('sending auth'); ws.send(JSON.stringify({ type: 'auth', token: token })); }
     };
-    ws.onmessage = function (e) { say('Server: ' + String(e.data).slice(0, 300)); };
-    ws.onerror = function () { say('Error event (browsers hide the cause).'); };
+    ws.onmessage = function (e) { msgs++; say('message: ' + String(e.data).slice(0, 160)); };
+    ws.onerror = function () { say('error event (browsers hide the cause)'); };
     ws.onclose = function (e) {
-      say('Closed: code ' + e.code + (e.reason ? ' reason ' + e.reason : ''));
+      clearTimeout(giveUp);
+      say('closed: code ' + e.code + (e.reason ? ' reason "' + e.reason + '"' : '') + ', ' + msgs + ' messages received');
       if (!opened) {
         tag('ws', 'bad', 'never opened');
-        say(violations.length ? 'A CSP violation was logged below, so the policy blocked it.' : 'No CSP violation was logged, so the cause is more likely network, TLS, or the server.');
+        say(violations.length ? 'A CSP violation was logged below, so the policy blocked it.' : 'No CSP violation was logged, so the cause is more likely network, TLS, origin check, or the server.');
       }
     };
-  });
+  }
+  $('wsgo').addEventListener('click', function () { runWs('real'); });
+  $('wsbad').addEventListener('click', function () { runWs('bad'); });
+  $('wssilent').addEventListener('click', function () { runWs('silent'); });
 })();
 </script>
 </body>
