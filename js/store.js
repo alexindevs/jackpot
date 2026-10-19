@@ -49,6 +49,7 @@ function fromSnapshot(s, d) {
   r.spectators = d.spectators;
   for (const p of d.players) { r.players[p.id] = p; r.order.push(p.id); }
   r.seq = d.seq || 0; // our message counter at the moment of the snapshot
+  r.chat = (d.teamChat || []).map((m) => ({ id: m.id, round: m.round, from: m.from, text: m.text, at: m.at }));
   if (d.pausedUntil) r.paused = { until: when(s, d.pausedUntil), players: d.players.filter((p) => !p.removed).map((p) => p.id) };
   r.pub = (d.chat || []).map((m) => ({ id: m.id, from: m.from, text: m.text, at: m.at }));
   r.lastPubId = r.pub.reduce((a, m) => Math.max(a, m.id), 0);
@@ -124,7 +125,6 @@ export function reduce(prev, msg) {
         s.room = fromSnapshot(s, d);
         if (before) {
           // a snapshot only describes the present: keep what we had already seen
-          s.room.chat = before.chat;
           // message numbers start again from zero after a server restart: a lower seq than before means a new "epoch"
           s.room.epoch = d.seq < before.seq ? before.epoch + 1 : before.epoch;
           s.room.signals = before.signals;
@@ -221,7 +221,10 @@ function reduceRoom(s, t, d, num) {
     case 'chat_message': addPublic(r, d); break;
     case 'signal': addSignal(r, s, d, num, false); break;
     case 'ready_changed': if (r.players[d.player]) r.players[d.player].ready = d.ready; break;
-    case 'team_chat_message': r.chat.push({ from: d.from, text: d.text }); break;
+    case 'team_chat_message':
+      if (d.id !== undefined && r.chat.some((m) => m.id === d.id)) break; // already in the pane (snapshot or replay)
+      r.chat.push({ id: d.id, round: d.round, from: d.from, text: d.text, at: d.at });
+      break;
     case 'hand_update':
       if (!r.game) break;
       if (d.player === s.me) r.game.hand = d.hand;

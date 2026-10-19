@@ -24,12 +24,22 @@ export function connecting(ui) {
   </section>`;
 }
 
+// Players of a saved game or lobby, grouped by team (or pair, in a lobby), with who is back.
+function groupedPlayers(g) {
+  const label = g.kind === 'lobby' ? 'Pair' : 'Team';
+  const by = new Map();
+  for (const p of g.players) { const k = p.team < 0 ? -1 : p.team; if (!by.has(k)) by.set(k, []); by.get(k).push(p); }
+  const mark = (p) => `<span class="${p.here ? 'ok' : 'warn'}">${esc(p.name)}${p.here ? ' ✓' : ' …'}</span>`;
+  return [...by].sort((a, b) => a[0] - b[0]).map(([k, ps]) => `<div class="mute sm">${k < 0 ? 'No partner yet' : label + ' ' + (k + 1)}: ${ps.map(mark).join(', ')}</div>`).join('');
+}
+
 function resumeList(s) {
   if (!s.myGames.length) return '';
   return `<div class="prompt"><b>Resume your game</b>${s.myGames.map((g) => {
     const back = g.players.filter((p) => p.here).length;
-    return `<div class="room"><div>Room <b>${esc(g.room)}</b>, round ${g.round}
-      <div class="mute sm">${g.players.map((p) => `<span class="${p.here ? 'ok' : 'warn'}">${esc(p.name)}${p.here ? ' ✓' : ' …'}</span>`).join(', ')}</div>
+    const what = g.kind === 'lobby' ? `Lobby <b>${esc(g.room)}</b> (not started yet)` : `Game in room <b>${esc(g.room)}</b>, round ${g.round}`;
+    return `<div class="room"><div>${what}
+      ${groupedPlayers(g)}
       <div class="mute sm">${back} of ${g.players.length} back. Given up in <b data-countdown="${g.until}">${clock(g.until - Date.now())}</b></div></div>
       <button data-act="resume-game" data-room="${esc(g.room)}">Resume</button></div>`;
   }).join('')}</div>`;
@@ -79,10 +89,13 @@ export function lobby(s, ui) {
   const count = r.countdownEndsAt
     ? `<p>Game starts in <b data-countdown="${r.countdownEndsAt}">${clock(r.countdownEndsAt - Date.now())}</b></p>`
     : `<p class="mute">${r.order.length < 4 ? 'The countdown starts at 4 players.' : 'Waiting for the countdown.'}</p>`;
-  const canStart = r.creator === me && teams >= 2 && unpaired.length === 0;
+  const canStart = r.creator === me && teams >= 2 && unpaired.length === 0 && !r.paused;
   return `<section class="panel">
     <div class="row between"><h2>Room ${esc(r.id)}</h2><div class="row"><button class="alt" data-act="guide">How to play</button><button class="alt" data-act="leave">Leave</button></div></div>
     ${spectating ? '<p class="warn">You are watching this room.</p>' : ''}
+    ${r.paused ? (() => { const ids = r.paused.players.filter((id) => r.players[id] && !r.players[id].removed); const back = ids.filter((id) => r.players[id].connected).length;
+      return `<div class="prompt"><b>Lobby paused: waiting for everyone (${back} of ${ids.length} back).</b>
+      <div class="mute sm">You can still pick partners. Starting and new joiners wait until everyone is here. It is given up in <b data-countdown="${r.paused.until}">${clock(r.paused.until - Date.now())}</b>.</div></div>`; })() : ''}
     <div class="row"><input id="invite-link" readonly size="30" value="${esc(ui.inviteLink(r.id))}"><button class="alt" data-act="copy-link">Copy invite link</button></div>
     <p class="mute sm">Anyone with this link can join the room. They'll be asked to sign in with start.ng first.</p>
     ${count}
