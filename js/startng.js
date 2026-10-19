@@ -8,6 +8,7 @@ export function readSession() {
     const fresh = h.get('startng_session');
     if (fresh) {
       sessionStorage.setItem(KEY, fresh);
+      sessionStorage.setItem(KEY + '_exp', String(Date.now() + (+h.get('expires_in') || 7200) * 1000));
       history.replaceState(null, '', location.pathname + location.search);
     }
     return sessionStorage.getItem(KEY);
@@ -15,7 +16,23 @@ export function readSession() {
 }
 
 export function clearSession() {
-  try { sessionStorage.removeItem(KEY); } catch { /* storage unavailable */ }
+  try { sessionStorage.removeItem(KEY); sessionStorage.removeItem(KEY + '_exp'); } catch { /* storage unavailable */ }
+}
+
+export function sessionExpiresAt() {
+  try { return +sessionStorage.getItem(KEY + '_exp') || 0; } catch { return 0; }
+}
+
+// start.ng has no silent refresh, so a new session means a round trip through sign-in. Tried at most once per
+// 10 minutes so a refusal can never become a redirect loop. Resolves false when it did not redirect.
+export function refreshSession() {
+  try {
+    const last = +sessionStorage.getItem(KEY + '_refresh') || 0;
+    if (Date.now() - last < 10 * 60 * 1000) return Promise.resolve(false);
+    sessionStorage.setItem(KEY + '_refresh', String(Date.now()));
+  } catch { return Promise.resolve(false); }
+  location.href = signInUrl();
+  return new Promise(() => {}); // the page is leaving
 }
 
 export function signInUrl() {

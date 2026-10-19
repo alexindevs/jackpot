@@ -1,8 +1,8 @@
 // The real client. Boots the session, opens the socket, and draws whichever screen the state calls for.
 import { Net } from './net.js';
-import { initial, reduce, nameOf } from './store.js';
+import { initial, reduce, applyMissed, nameOf } from './store.js';
 import { serverUrl, devName } from './config.js';
-import { readSession, clearSession, signInUrl, connectPage } from './startng.js';
+import { readSession, clearSession, signInUrl, connectPage, sessionExpiresAt, refreshSession } from './startng.js';
 import { clock } from './ui/dom.js';
 import * as screens from './ui/screens.js';
 import { table } from './ui/table.js';
@@ -36,7 +36,32 @@ function toast(text) {
   toast.t = setTimeout(() => (toastEl.hidden = true), 4000);
 }
 
-const net = new Net({ url: serverUrl(), getToken: token });
+// Sessions last about two hours. Near the end, get a new one before reconnecting.
+async function beforeConnect() {
+  if (dev || !session) return;
+  const exp = sessionExpiresAt();
+  if (exp && exp - Date.now() < 5 * 60 * 1000) await refreshSession();
+}
+
+const net = new Net({ url: serverUrl(), getToken: token, beforeConnect });
+
+// Catching up after a reconnect: snapshot first, then ask for what we missed, then resend unanswered actions.
+let lastS = 0, resumeFrom = 0, helloSeen = false, awaitingSnap = false, catchTimer = null;
+function track(m) {
+  if (m.t === 'snapshot') lastS = m.d.seq || 0;
+  else if (m.t === 'room_closed') lastS = 0;
+  else if (typeof m.s === 'number' && m.s > lastS) lastS = m.s;
+}
+function catchUp(gotSnap) {
+  awaitingSnap = false;
+  clearTimeout(catchTimer);
+  if (!gotSnap) { // no snapshot means the server no longer has us in a room
+    if (state.room) { state.room = null; state.invites = { partner: [], room: [] }; lastS = 0; render(); }
+    net.resendPending();
+    return;
+  }
+  net.request('resume', { after: resumeFrom }).catch(() => {}).finally(() => net.resendPending());
+}
 
 function act(type, fields) {
   return net.request(type, fields).catch((e) => toast(ERRORS[e.code] || e.message));
@@ -52,7 +77,14 @@ net.addEventListener('status', (e) => {
   render();
 });
 net.addEventListener('message', (e) => {
-  state = reduce(state, e.detail);
+  const m = e.detail;
+  if (m.t === 'hello') {
+    if (helloSeen) { resumeFrom = lastS; awaitingSnap = true; clearTimeout(catchTimer); catchTimer = setTimeout(() => catchUp(false), 600); }
+    helloSeen = true;
+  }
+  track(m);
+  state = m.t === 'missed' ? applyMissed(state, m.d) : reduce(state, m);
+  if (m.t === 'snapshot' && awaitingSnap) queueMicrotask(() => catchUp(true));
   if (e.detail.t === 'error' && e.detail.id === undefined) toast((e.detail.d || {}).message || 'Error');
   if (e.detail.t === 'hello') pollRooms();
   if (e.detail.t === 'partner_invite' && e.detail.d.to === state.me) toast(nameOf(state, e.detail.d.from) + ' wants you as a partner');
@@ -162,5 +194,5 @@ async function boot() {
   if (token()) net.connect();
   render();
 }
-if (dev) window.__jackpot = { get state() { return state; }, get net() { return net; } }; // read-only view for tests, dev sign-in only
+if (dev) window.__jackpot = { get state() { return state; }, get net() { return net; }, get lastS() { return lastS; } }; // read-only view for tests, dev sign-in only
 boot();

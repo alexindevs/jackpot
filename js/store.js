@@ -23,7 +23,7 @@ export const nameOf = (s, id) => (s.profiles[id] && s.profiles[id].name) || id;
 function newRoom(id) {
   return {
     id, creator: null, phase: 'lobby', players: {}, order: [], spectators: 0,
-    timers: [], countdownEndsAt: null, chat: [], pub: [], lastPubId: 0, log: [], game: null,
+    timers: [], countdownEndsAt: null, chat: [], pub: [], lastPubId: 0, seq: 0, log: [], game: null,
   };
 }
 
@@ -48,6 +48,7 @@ function fromSnapshot(s, d) {
   r.phase = d.phase;
   r.spectators = d.spectators;
   for (const p of d.players) { r.players[p.id] = p; r.order.push(p.id); }
+  r.seq = d.seq || 0; // our message counter at the moment of the snapshot
   r.pub = (d.chat || []).map((m) => ({ id: m.id, from: m.from, text: m.text, at: m.at }));
   r.lastPubId = r.pub.reduce((a, m) => Math.max(a, m.id), 0);
   r.timers = d.timers.map((t) => ({ kind: t.kind, player: t.player, endsAt: when(s, t.endsAt) }));
@@ -69,6 +70,28 @@ function addPublic(r, m) {
   r.pub.push({ id: m.id, from: m.from, text: m.text, at: m.at });
   r.lastPubId = m.id;
   if (r.pub.length > 300) r.pub.shift();
+}
+
+// Messages we missed while offline (the reply to `resume`). Those at or below the snapshot's seq are already
+// reflected in the snapshot, so they only feed the chat panes and the log; later ones are applied normally.
+export function applyMissed(prev, d) {
+  if (!prev.room) return prev;
+  const seq = prev.room.seq || 0;
+  let scratch = clone(prev);
+  const live = [];
+  for (const m of d.messages) (m.s <= seq ? (scratch = reduce(scratch, m)) : live.push(m));
+  let s = clone(prev);
+  const r = s.room, sr = scratch.room;
+  if (sr) {
+    const known = new Set(r.pub.map((m) => m.id));
+    for (const m of sr.pub) if (!known.has(m.id)) r.pub.push(m);
+    r.pub.sort((a, b) => a.id - b.id);
+    r.lastPubId = Math.max(r.lastPubId, sr.lastPubId);
+    r.chat = sr.chat; // the private team chat is not in a snapshot, only in the history
+    r.log = sr.log.slice(prev.room.log.length).map((l) => ({ text: '(missed) ' + l.text })).concat(r.log);
+  }
+  for (const m of live) s = reduce(s, m);
+  return s;
 }
 
 export function reduce(prev, msg) {
