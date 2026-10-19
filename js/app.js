@@ -23,8 +23,33 @@ const ERRORS = {
   slow_down: 'Slow down a little.', rate_limited: 'Slow down a little.', closed: 'Not connected.', timeout: 'The server did not answer.',
 };
 
+// An invite link looks like https://jackpot.start.ng/?room=abc123. Remember the room (it has to survive the
+// sign-in round trip), then join it as soon as we are connected.
+function takeInvite() {
+  try {
+    const q = new URLSearchParams(location.search);
+    const room = q.get('room');
+    if (room) {
+      sessionStorage.setItem('pending_room', room);
+      q.delete('room');
+      history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash);
+    }
+  } catch { /* storage unavailable: the link just opens the room list */ }
+}
+takeInvite();
+const pendingRoom = () => { try { return sessionStorage.getItem('pending_room'); } catch { return null; } };
+const clearPendingRoom = () => { try { sessionStorage.removeItem('pending_room'); } catch { /* ignore */ } };
+
+function inviteLink(roomId) {
+  const q = new URLSearchParams();
+  const server = new URLSearchParams(location.search).get('server');
+  if (server) q.set('server', server); // only set when testing against another server
+  q.set('room', roomId);
+  return location.origin + location.pathname + '?' + q;
+}
+
 let state = initial();
-const ui = { sel: [], status: 'closed', identity: null, notice: null, blocked: false, signInUrl: signInUrl() };
+const ui = { inviteLink, sel: [], status: 'closed', identity: null, notice: null, blocked: false, signInUrl: signInUrl() };
 const dev = devName();
 let session = dev ? null : readSession();
 const token = () => (dev ? 'dev:' + dev : session);
@@ -86,7 +111,7 @@ net.addEventListener('message', (e) => {
   state = m.t === 'missed' ? applyMissed(state, m.d) : reduce(state, m);
   if (m.t === 'snapshot' && awaitingSnap) queueMicrotask(() => catchUp(true));
   if (e.detail.t === 'error' && e.detail.id === undefined) toast((e.detail.d || {}).message || 'Error');
-  if (e.detail.t === 'hello') pollRooms();
+  if (e.detail.t === 'hello') { pollRooms(); setTimeout(tryPendingJoin, 400); } // after a possible snapshot
   if (e.detail.t === 'partner_invite' && e.detail.d.to === state.me) toast(nameOf(state, e.detail.d.from) + ' wants you as a partner');
   if (e.detail.t === 'room_invite') toast(nameOf(state, e.detail.d.from) + ' invited you to a room');
   if (e.detail.t === 'game_event' && (e.detail.kind === 'suspicion_failed' || e.detail.kind === 'suspicion_freed')) ui.sel = [];
@@ -112,6 +137,13 @@ async function pollChat() {
 function syncChatPoll() {
   if (net.status !== 'open' && state.room && !chatPoll) chatPoll = setInterval(pollChat, 60000);
   if ((net.status === 'open' || !state.room) && chatPoll) { clearInterval(chatPoll); chatPoll = null; }
+}
+
+function tryPendingJoin() {
+  const room = pendingRoom();
+  if (!room || net.status !== 'open' || !state.me || state.room) return;
+  clearPendingRoom(); // one attempt, so a refused link never loops
+  act('join', { room }).then((m) => { if (!m) toast('Could not join room ' + room); });
 }
 
 function pollRooms() {
@@ -148,6 +180,14 @@ root.addEventListener('click', (e) => {
   const d = b.dataset;
   switch (d.act) {
     case 'reload': location.reload(); break;
+    case 'copy-link': {
+      const link = inviteLink(state.room.id);
+      (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(
+        () => toast('Invite link copied'),
+        () => { const i = document.getElementById('invite-link'); if (i) { i.select(); toast('Press Ctrl+C to copy the link'); } },
+      );
+      break;
+    }
     case 'create': act('create_room'); break;
     case 'refresh': pollRooms(); break;
     case 'join': act('join', { room: d.room }); break;

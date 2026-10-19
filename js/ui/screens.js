@@ -58,6 +58,8 @@ export function lobby(s, ui) {
   return `<section class="panel">
     <div class="row between"><h2>Room ${esc(r.id)}</h2><button class="alt" data-act="leave">Leave</button></div>
     ${spectating ? '<p class="warn">You are watching this room.</p>' : ''}
+    <div class="row"><input id="invite-link" readonly size="30" value="${esc(ui.inviteLink(r.id))}"><button class="alt" data-act="copy-link">Copy invite link</button></div>
+    <p class="mute sm">Anyone with this link can join the room. They'll be asked to sign in with start.ng first.</p>
     ${count}
     ${invitedMe.map((i) => `<div class="room"><div>${who(s, i.from)} wants you as a partner</div>
       <div class="row"><button data-act="accept" data-from="${esc(i.from)}">Accept</button><button class="alt" data-act="decline" data-from="${esc(i.from)}">Decline</button></div></div>`).join('')}
