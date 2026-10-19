@@ -134,7 +134,6 @@
     $('pname').textContent = p.name || 'Guest';
     $('paccount').textContent = user && user.account ? '@' + user.account : (user ? '' : 'Not signed in');
     if (p.face) { $('face').src = p.face; $('face').hidden = false; }
-    $('signin').hidden = !!user;
   }
 
   function whoami() {
@@ -166,7 +165,7 @@
 
   if (!session) {
     tag('sess', 'warn', 'no session');
-    out('sess', 'No #startng_session in the URL. Sign in via the button above, then this page will receive one.');
+    out('sess', 'No #startng_session yet. Identity above works without one, but the backend needs a session. Use the "Sign in to get a session" button, which returns here with one.');
   } else {
     fetch(API + '/games/' + GAME + '/player', { headers: { Authorization: 'Bearer ' + session } })
       .then(function (r) {
@@ -181,10 +180,10 @@
       });
   }
 
-  $('signin').addEventListener('click', function (e) {
-    e.preventDefault();
-    window.open('https://start.ng/', '_blank');
-  });
+  // Sign-in round trip: start.ng sends the player back with #startng_session=...
+  $('signin').href = 'https://start.ng/?return_to=' + encodeURIComponent(location.origin + location.pathname);
+  $('signin').textContent = 'Sign in to get a session';
+  $('signin').hidden = false;
 
   // ---- 3. WebSocket to our own domain ----
   var qs = new URLSearchParams(location.search);
