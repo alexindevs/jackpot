@@ -6,6 +6,7 @@ import { readSession, clearSession, signInUrl, connectPage, sessionExpiresAt, re
 import { clock } from './ui/dom.js';
 import * as screens from './ui/screens.js';
 import { table } from './ui/table.js';
+import { openGuide } from './ui/guide.js';
 
 const root = document.getElementById('app');
 const toastEl = document.getElementById('toast');
@@ -208,6 +209,7 @@ root.addEventListener('click', (e) => {
   const d = b.dataset;
   switch (d.act) {
     case 'reload': location.reload(); break;
+    case 'guide': openGuide(); break;
     case 'watch-invited': { const room = ui.inviteNotice && ui.inviteNotice.room; ui.inviteNotice = null; if (room) act('spectate', { room }); render(); break; }
     case 'dismiss-notice': ui.inviteNotice = null; render(); break;
     case 'copy-link': {

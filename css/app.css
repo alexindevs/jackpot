@@ -36,3 +36,13 @@ h3 { margin:8px 0 4px; font-size:14px; }
 .tag.priv { color:var(--warn); border-color:var(--warn); }
 .chat.team { border-left:3px solid var(--warn); }
 .panel.pub { border-left:3px solid var(--acc); }
+.modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.65); display:flex; align-items:center; justify-content:center; padding:16px; z-index:50; }
+.modal { background:var(--card); border-radius:12px; width:min(560px, 100%); max-height:min(86vh, 720px); display:flex; flex-direction:column; box-shadow:0 10px 40px rgba(0,0,0,.5); }
+.modal-head { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:14px 16px 8px; }
+.modal-head h2 { margin:0; font-size:18px; }
+.modal-body { overflow:auto; padding:0 16px 8px; font-size:14px; line-height:1.5; }
+.modal-body h3 { margin:14px 0 4px; font-size:14px; color:var(--acc); }
+.modal-body p, .modal-body ul { margin:4px 0; }
+.modal-body ul { padding-left:20px; }
+.modal-body .g { display:inline-block; font-size:18px; padding:0 4px; }
+.modal-foot { padding:10px 16px 14px; text-align:right; border-top:1px solid #232733; }

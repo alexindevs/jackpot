@@ -36,7 +36,7 @@ export function rooms(s, ui) {
   const invites = s.invites.room.map((i, n) => `<div class="room"><div>${who(s, i.from)} invited you to <b>${esc(i.room)}</b></div>
       <div class="row"><button data-act="join" data-room="${esc(i.room)}">Join</button><button class="alt" data-act="dismiss-room-invite" data-n="${n}">Dismiss</button></div></div>`).join('');
   return `<section class="panel">
-    <div class="row between"><h2>Rooms</h2><div class="row"><button data-act="create">Create room</button><button class="alt" data-act="refresh">Refresh</button></div></div>
+    <div class="row between"><h2>Rooms</h2><div class="row"><button data-act="create">Create room</button><button class="alt" data-act="guide">How to play</button><button class="alt" data-act="refresh">Refresh</button></div></div>
     ${s.closed ? `<p class="warn">Your last room closed (${esc(s.closed)}).</p>` : ''}
     ${ui.inviteNotice && ui.inviteNotice.text ? `<div class="prompt"><div>${esc(ui.inviteNotice.text)}</div><div class="row" style="margin-top:6px">
       ${ui.inviteNotice.canWatch ? '<button data-act="watch-invited">Watch</button>' : ''}<button class="alt" data-act="dismiss-notice">Dismiss</button></div></div>` : ''}
@@ -69,7 +69,7 @@ export function lobby(s, ui) {
     : `<p class="mute">${r.order.length < 4 ? 'The countdown starts at 4 players.' : 'Waiting for the countdown.'}</p>`;
   const canStart = r.creator === me && teams >= 2 && unpaired.length === 0;
   return `<section class="panel">
-    <div class="row between"><h2>Room ${esc(r.id)}</h2><button class="alt" data-act="leave">Leave</button></div>
+    <div class="row between"><h2>Room ${esc(r.id)}</h2><div class="row"><button class="alt" data-act="guide">How to play</button><button class="alt" data-act="leave">Leave</button></div></div>
     ${spectating ? '<p class="warn">You are watching this room.</p>' : ''}
     <div class="row"><input id="invite-link" readonly size="30" value="${esc(ui.inviteLink(r.id))}"><button class="alt" data-act="copy-link">Copy invite link</button></div>
     <p class="mute sm">Anyone with this link can join the room. They'll be asked to sign in with start.ng first.</p>
