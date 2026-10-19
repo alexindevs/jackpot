@@ -43,9 +43,10 @@ function makeSeat(i) {
     const msg = e.detail;
     addLog(seat, '< ' + JSON.stringify(msg).slice(0, 240));
     seat.state = reduce(seat.state, msg);
-    seat.acted = '';
+    if (msg.t === 'game_event' && msg.kind === 'passed') seat.acted = ''; // the game moved on; the same hand may come round again
     if (!seat.el.contains(document.activeElement) || document.activeElement.tagName === 'BUTTON') render(seat);
     if (seat.auto) autoStep(seat);
+    checkProclaims();
   });
   el.querySelector('.auto').onchange = (e) => { seat.auto = e.target.checked; if (seat.auto) autoStep(seat); };
   el.querySelector('.sendraw').onclick = () => {
@@ -66,18 +67,44 @@ function autoStep(seat) {
   let plan = null;
   if (g.forcedPass === me || (g.holder === me && total(g.hand) === 5)) {
     // keep the type we hold most; pass the one we hold least (but at least one)
+    const held = g.hand.map((c, t) => (c > 0 ? t : -1)).filter((t) => t >= 0);
     let best = -1;
     g.hand.forEach((c, t) => { if (c > 0 && (best < 0 || c < g.hand[best])) best = t; });
+    // mostly pass the least-held type, sometimes a random one, so hands can drift towards four of a kind
+    if (Math.random() < 0.3) best = held[Math.floor(Math.random() * held.length)];
     plan = ['pass', { card: best }];
   } else if (g.reveal) {
-    plan = ['reveal', { types: g.reveal.options.slice(0, g.reveal.required) }];
+    if (seat.revealSent) return; // answered; wait for suspicion_freed or suspicion_failed
+    seat.revealSent = true;
+    addLog(seat, '> auto reveal');
+    act(seat, 'reveal', { types: g.reveal.options.slice(0, g.reveal.required) });
+    return;
   }
+  if (!g.reveal) seat.revealSent = false;
   if (!plan) return;
-  const key = JSON.stringify(plan);
+  // one action per distinct game state: replies and unrelated messages must not trigger a repeat
+  const key = JSON.stringify([plan, g.round, g.holder, g.hand, g.forcedPass, g.reveal]);
   if (seat.acted === key) return;
   seat.acted = key;
-  addLog(seat, '> auto ' + key);
+  addLog(seat, '> auto ' + JSON.stringify(plan));
   act(seat, plan[0], plan[1]);
+}
+
+// Test helper: this tab sees every seat's hand, so it can have the partner proclaim for a player holding four of a kind.
+let autoProclaim = false;
+let proclaimed = '';
+function checkProclaims() {
+  if (!autoProclaim) return;
+  for (const seat of seats) {
+    const g = seat.state.room && seat.state.room.game;
+    if (!g || g.phase !== 'playing' || !g.hand.some((c) => c === 4)) continue;
+    const partner = seats.find((x) => x.state.me === seat.state.room.players[seat.state.me].partner);
+    const key = seat.name + JSON.stringify(g.hand) + g.round;
+    if (!partner || proclaimed === key) continue;
+    proclaimed = key;
+    addLog(partner, '> auto proclaim for ' + seat.name);
+    act(partner, 'proclaim');
+  }
 }
 
 function cardsHtml(hand, passable, handler) {
@@ -181,9 +208,10 @@ async function scenario() {
 
 $('connect').onclick = connectAll;
 $('disconnect').onclick = disconnectAll;
+$('autoproc').onchange = (e) => { autoProclaim = e.target.checked; };
 $('scenario').onclick = () => scenario().catch((e) => ($('top').textContent = 'scenario failed: ' + e.message));
 // refresh countdowns, but never wipe a seat the user is typing in
 setInterval(() => seats.forEach((s) => { if (!s.el.contains(document.activeElement) || document.activeElement.tagName === 'BUTTON') render(s); }), 1000);
 
 // handy for console and headless tests
-window.harness = { seats, connectAll, scenario, disconnectAll, act };
+window.harness = { setAuto: (v) => seats.forEach((s) => { s.auto = v; if (v) autoStep(s); }), setAutoProclaim: (v) => { autoProclaim = v; }, seats, connectAll, scenario, disconnectAll, act };

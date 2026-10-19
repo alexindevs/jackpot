@@ -215,10 +215,10 @@ function reduceEvent(s, kind, d) {
       say(s, n(d.by) + ' proclaimed falsely' + (d.revoked ? ' and loses the right to proclaim' : ''));
       break;
     case 'round_won':
-      g.wins = d.wins; g.phase = 'waiting'; g.holder = '';
+      g.wins[d.team] = d.wins; g.phase = 'waiting'; g.holder = ''; // d.wins is the winning team's new total
       for (const k of ['hold', 'reveal', 'forced']) dropTimers(r, k);
       g.pendingReveals = []; g.reveal = null; g.forcedPass = '';
-      say(s, 'team ' + d.team + ' wins the round (' + (d.letter || LETTERS[(d.wins[d.team] || 1) - 1]) + '), proclaimed by ' + n(d.proclaimer));
+      say(s, 'team ' + d.team + ' wins the round (' + (d.letter || LETTERS[d.wins - 1]) + '), proclaimed by ' + n(d.proclaimer));
       break;
     case 'team_removed':
       for (const id of d.members) if (r.players[id]) r.players[id].removed = true;
