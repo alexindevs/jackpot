@@ -1,5 +1,5 @@
 // Where the game server lives. Override per page load with ?server=wss://host/ws
-export const DEFAULT_SERVER = 'wss://CHANGE-ME.example/ws';
+export const DEFAULT_SERVER = 'wss://jackpot-backend-wkt0.onrender.com/ws';
 
 export const HIDDEN = 255;
 export const CARDS = [
