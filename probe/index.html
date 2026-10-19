@@ -189,13 +189,15 @@
 
   // ---- 3. WebSocket to our own domain ----
   var qs = new URLSearchParams(location.search);
-  if (qs.get('server') || qs.get('ws')) $('wsurl').value = qs.get('server') || qs.get('ws');
+  $('wsurl').value = qs.get('server') || qs.get('ws') || 'wss://jackpot-backend-wkt0.onrender.com/ws';
 
   // mode: 'real' (auth with the start.ng session, stay open ~50s to see heartbeats), 'bad' (nonsense token),
   // 'silent' (send nothing). Every line carries milliseconds since the socket was created.
   function runWs(mode) {
     var url = $('wsurl').value.trim();
     if (!/^wss?:\/\//.test(url)) { out('ws', 'Enter a ws:// or wss:// URL.'); return; }
+    var fixed = false;
+    try { var pu = new URL(url); if (pu.pathname === '' || pu.pathname === '/' || pu.pathname === '/ws/') { pu.pathname = '/ws'; url = pu.toString(); $('wsurl').value = url; fixed = true; } } catch (e) { /* keep as typed */ }
     var log = [], t0 = performance.now();
     function say(s) { log.push('+' + Math.round(performance.now() - t0) + 'ms ' + s); out('ws', log.join('\n')); }
     tag('ws', 'warn', 'connecting');
@@ -203,6 +205,8 @@
     var isLocal = u.hostname === 'localhost' || u.hostname === '127.0.0.1';
     var token = mode === 'bad' ? 'nonsense' : (isLocal ? 'dev:probe' : session);
     say('mode ' + mode + ', page origin ' + location.origin + ', url ' + url);
+    if (fixed) say('note: the address had no /ws path, so I added it (the socket lives at /ws)');
+    else if (new URL(url).pathname !== '/ws') say('WARNING: the path is ' + new URL(url).pathname + ', not /ws. A wrong path is answered with 404, which the browser shows as a failed connection.');
     if (mode === 'real' && !token) { tag('ws', 'warn', 'need session'); say('No start.ng session available. Use "Sign in to get a session" first.'); return; }
     var opened = false, ws, msgs = 0;
     try { ws = new WebSocket(url); } catch (err) { tag('ws', 'bad', 'blocked'); say('Constructor threw: ' + err.message); return; }
