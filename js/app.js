@@ -3,11 +3,11 @@ import { Net } from './net.js';
 import { initial, reduce, applyMissed, nameOf } from './store.js';
 import { serverUrl, devName } from './config.js';
 import { readSession, clearSession, signInUrl, connectPage, sessionExpiresAt, refreshSession } from './startng.js';
-import { clock } from './ui/dom.js';
+import { clock, esc } from './ui/dom.js';
 import * as screens from './ui/screens.js';
-import { table } from './ui/table.js';
+import { table, screenKind, isPlayer, teamNames, myTeam } from './ui/table.js';
 import { openGuide } from './ui/guide.js';
-import { openPalette } from './ui/signals.js';
+import { renderDock, renderSheet, popup, banner } from './ui/sheets.js';
 
 const root = document.getElementById('app');
 const toastEl = document.getElementById('toast');
@@ -65,7 +65,7 @@ function inviteLink(roomId) {
 }
 
 let state = initial();
-const ui = { inviteLink, guest: guestArrival, pendingRoom, inviteNotice: null, retryIn: 0, sel: [], status: 'closed', identity: null, notice: null, blocked: false, signInUrl: signInUrl() };
+const ui = { sheet: null, dockOpen: false, unread: { chat: 0, team: 0 }, logTab: 'events', sigQuery: '', over: null, inviteLink, guest: guestArrival, pendingRoom, inviteNotice: null, retryIn: 0, sel: [], status: 'closed', identity: null, notice: null, blocked: false, signInUrl: signInUrl() };
 const dev = devName();
 let session = dev ? null : readSession();
 const token = () => (dev ? 'dev:' + dev : session);
@@ -108,7 +108,11 @@ function catchUp(gotSnap) {
   // no snapshot: the server has no current room for us
   if (state.room) { state.room = null; state.invites = { partner: [], room: [] }; lastS = 0; render(); }
   net.resendPending();
-  net.request('my_games').catch(() => {}); // a paused game is not a current room; offer to go back to it
+  // a paused game is not a current room: offer to go back to it, and go straight back if there is just one
+  net.request('my_games').then(() => {
+    const games = state.myGames.filter((g) => g.kind !== 'lobby');
+    if (!state.room && state.myGames.length === 1 && games.length === 1) net.request('resume_game', { room: games[0].room }).catch(() => {});
+  }).catch(() => {});
 }
 
 function act(type, fields) {
@@ -131,6 +135,36 @@ net.addEventListener('status', (e) => {
   }
   render();
 });
+// Unread badges, short popups for what just happened, and the round and game banners.
+function announce(m, before) {
+  const r = state.room;
+  if (!r) return;
+  const n = (id) => (id === state.me ? 'You' : nameOf(state, id));
+  if (m.t === 'chat_message' && m.d.from !== state.me && ui.sheet !== 'chat') ui.unread.chat++;
+  if (m.t === 'team_chat_message' && m.d.from !== state.me && ui.sheet !== 'team') ui.unread.team++;
+  if (m.t === 'signal') {
+    const g = state.gestures.find((x) => x.id === m.d.gesture);
+    popup(`${m.d.scope === 'team' ? '🔒 ' : ''}<b>${esc(n(m.d.from))}</b> ${esc(g ? g.seen : m.d.gesture)}`, m.d.scope === 'team' ? 'private' : '');
+  }
+  if (m.t === 'connection_changed' && m.d.player !== state.me && r.game) popup(`<b>${esc(n(m.d.player))}</b> ${m.d.connected ? 'is back online' : 'went offline'}`, m.d.connected ? '' : 'warn');
+  if (m.t === 'paused') popup('Game paused: waiting for everyone', 'warn');
+  if (m.t === 'resumed') popup('Everyone is back. Game on!');
+  if (m.t !== 'game_event') return;
+  const d = m.d;
+  if (m.kind === 'round_started') popup(`Round ${d.round}: <b>${esc(n(d.holder))}</b> ${d.holder === state.me ? 'hold' : 'holds'} the passing card`);
+  else if (m.kind === 'passed' && d.to === state.me) popup(`<b>${esc(n(d.from))}</b> passed you the card`);
+  else if (m.kind === 'suspicion_raised') popup(`<b>${esc(n(d.by))}</b> ${d.by === state.me ? 'suspect' : 'suspects'} <b>${esc(n(d.target))}</b>`, 'warn');
+  else if (m.kind === 'suspicion_freed') popup(`<b>${esc(n(d.target))}</b> ${d.target === state.me ? 'were' : 'was'} cleared`);
+  else if (m.kind === 'suspicion_failed') popup(`<b>${esc(n(d.target))}</b> ${d.target === state.me ? 'were' : 'was'} caught!`, 'bad');
+  else if (m.kind === 'false_proclaim') popup(`<b>${esc(n(d.by))}</b> called Jackpot falsely`, 'bad');
+  else if (m.kind === 'team_removed') popup('A team left the game', 'warn');
+  else if (m.kind === 'round_won') {
+    const mine = myTeam(state) === d.team;
+    banner(`<div class="big">${isPlayer(state) ? (mine ? 'Your team won the round!' : 'The other team won the round') : esc(teamNames(state, d.team)) + ' won the round'}</div>
+      <div>${esc(teamNames(state, d.team))} <span class="letter">${esc(d.letter || '')}</span></div>`);
+  } else if (m.kind === 'game_over') ui.over = { at: Date.now(), stay: false };
+}
+
 net.addEventListener('message', (e) => {
   const m = e.detail;
   if (m.t === 'hello') {
@@ -138,11 +172,13 @@ net.addEventListener('message', (e) => {
     if (helloSeen) resumeFrom = lastS;
     awaitingSnap = true;
     clearTimeout(catchTimer);
-    catchTimer = setTimeout(() => catchUp(false), 600);
+    catchTimer = setTimeout(() => catchUp(false), 3000);
     helloSeen = true;
   }
   track(m);
+  const before = state;
   state = m.t === 'missed' ? applyMissed(state, m.d) : reduce(state, m);
+  announce(m, before);
   if (m.t === 'snapshot' && awaitingSnap) queueMicrotask(() => catchUp(true));
   if (e.detail.t === 'error' && e.detail.id === undefined) toast((e.detail.d || {}).message || 'Error');
   if (e.detail.t === 'hello') { pollRooms(); setTimeout(tryPendingJoin, 400); } // after a possible snapshot
@@ -209,11 +245,23 @@ function view() {
   return table(state, ui);
 }
 
+let lastScreen = '';
+const isGameScreen = () => !ui.blocked && !!token() && !!state.me && !!state.room && state.room.phase !== 'lobby';
+
 function render() {
+  const game = isGameScreen();
   // keep what the player is typing across redraws
   const a = document.activeElement;
   const keep = a && a.id && root.contains(a) ? { id: a.id, value: a.value, start: a.selectionStart, end: a.selectionEnd } : null;
-  root.innerHTML = screens.header(state, ui) + view();
+  root.innerHTML = (game ? '' : screens.header(state, ui)) + view();
+  document.body.classList.toggle('stage-on', game);
+  // a different screen starts at the top (the old layout kept its scroll position into the next screen)
+  const key = game ? screenKind(state) : (state.room ? 'lobby' : 'other');
+  if (key !== lastScreen) { lastScreen = key; window.scrollTo(0, 0); }
+  if (!game) { ui.sheet = null; ui.dockOpen = false; }
+  renderDock(state, ui, game);
+  renderSheet(state, ui);
+  renderOverlay();
   root.querySelectorAll('[data-stick]').forEach((el) => { el.scrollTop = el.scrollHeight; });
   if (keep) {
     const el = document.getElementById(keep.id);
@@ -221,17 +269,76 @@ function render() {
   }
 }
 
+// The end of a game: a banner for a few seconds, then a short countdown back to the lobby (with a way to stay).
+function renderOverlay() {
+  const el = document.getElementById('overlay');
+  const o = ui.over;
+  if (!o || o.stay || !state.room || screenKind(state) !== 'over') {
+    if (!el.hidden) { el.hidden = true; el.innerHTML = ''; el.dataset.phase = ''; }
+    if (o && !state.room) ui.over = null;
+    return;
+  }
+  const t = Date.now() - o.at;
+  const res = state.room.game.result || {};
+  const mt = myTeam(state);
+  const won = !res.draw && mt !== null && mt === res.winner;
+  const winners = res.draw ? '' : teamNames(state, res.winner);
+  const how = res.reason === 'forfeit' ? ' by forfeit' : res.reason === 'agreement' ? ' on most rounds' : '';
+  const phase = t < 4000 ? 'result' : 'count';
+  el.className = 'overlay ' + (res.draw ? 'draw' : won ? 'win' : 'lose');
+  el.hidden = false;
+  if (el.dataset.phase !== phase) { // rebuild only when the phase changes, so a tap on Stay is never swallowed
+    el.dataset.phase = phase;
+    el.innerHTML = phase === 'result'
+      ? `<div class="icon">${res.draw ? '🤝' : won ? '🎉' : '🏁'}</div>
+         <div class="big">${res.draw ? 'It is a draw' : won ? 'Well done, you won!' : isPlayer(state) ? 'Game over. You lost this one' : 'Game over'}</div>
+         ${res.draw ? '' : `<div>${esc(winners)} win${how}</div>`}`
+      : `<div class="big">Going back to the lobby in <span id="over-count">3</span>…</div><button class="alt" data-act="over-stay">Stay here</button>`;
+  }
+  if (phase === 'count') {
+    const left = Math.max(0, 3 - Math.floor((t - 4000) / 1000));
+    const c = document.getElementById('over-count');
+    if (c) c.textContent = left;
+    if (t >= 7000) { ui.over = null; leaveRoom(); }
+  }
+}
+setInterval(renderOverlay, 250);
+
+function leaveRoom() {
+  ui.sheet = null; ui.dockOpen = false;
+  return act('leave').then(() => { state.room = null; pollRooms(); render(); });
+}
+
 const val = (id) => (document.getElementById(id).value || '').trim();
 
-root.addEventListener('click', (e) => {
+// A tap is a press and a release on the same button. If the game redraws the screen in between (a message arrived), the
+// button under the finger is replaced, and the browser then sends no click at all. So remember the press, and if the
+// button has been replaced by the time of the release, but the finger is still on that spot, treat it as the tap it was.
+let pressed = null;
+document.addEventListener('pointerdown', (e) => {
+  const b = e.target.closest && e.target.closest('[data-act]');
+  if (!b || b.disabled) { pressed = null; return; }
+  pressed = { el: b, data: { ...b.dataset }, rect: b.getBoundingClientRect(), at: Date.now() };
+}, true);
+document.addEventListener('pointerup', (e) => {
+  const p = pressed;
+  pressed = null;
+  if (!p || p.el.isConnected || Date.now() - p.at > 3000) return; // the button is still there: the normal click handles it
+  const r = p.rect, slack = 6;
+  if (e.clientX >= r.left - slack && e.clientX <= r.right + slack && e.clientY >= r.top - slack && e.clientY <= r.bottom + slack) runAction(p.data);
+}, true);
+
+function onAction(e) {
   const b = e.target.closest('[data-act]');
-  if (!b || b.disabled) return;
-  const d = b.dataset;
+  if (b && !b.disabled) runAction(b.dataset);
+}
+
+function runAction(d) {
+
   switch (d.act) {
     case 'reload': location.reload(); break;
     case 'guide': openGuide(); break;
     case 'resume-game': act('resume_game', { room: d.room }); break;
-    case 'signal-palette': openPalette(state.gestures, (id) => act('signal', { gesture: id })); break;
     case 'watch-invited': { const room = ui.inviteNotice && ui.inviteNotice.room; ui.inviteNotice = null; if (room) act('spectate', { room }); render(); break; }
     case 'dismiss-notice': ui.inviteNotice = null; render(); break;
     case 'copy-link': {
@@ -248,7 +355,18 @@ root.addEventListener('click', (e) => {
     case 'spectate': act('spectate', { room: d.room }); break;
     case 'join-code': if (val('join-code')) act('join', { room: val('join-code') }); break;
     case 'dismiss-room-invite': state.invites.room.splice(+d.n, 1); render(); break;
-    case 'leave': act('leave').then(() => { state.room = null; pollRooms(); render(); }); break;
+    case 'leave': leaveRoom(); break;
+    case 'leave-confirm': {
+      const inGame = state.room && state.room.game && state.room.game.phase !== 'over' && isPlayer(state);
+      if (!inGame || confirm('Leave the game? Your whole team drops out straight away.')) leaveRoom();
+      break;
+    }
+    case 'dock': ui.dockOpen = !ui.dockOpen; render(); break;
+    case 'sheet': ui.sheet = d.kind; ui.dockOpen = false; ui.sigQuery = ''; if (d.kind in ui.unread) ui.unread[d.kind] = 0; render(); break;
+    case 'sheet-close': ui.sheet = null; render(); break;
+    case 'log-tab': ui.logTab = d.tab; render(); break;
+    case 'over-stay': if (ui.over) ui.over.stay = true; render(); break;
+    case 'send-signal': ui.sheet = null; render(); act('signal', { gesture: d.gesture }); break;
     case 'start': act('start_now'); break;
     case 'invite-partner': act('invite_partner', { to: d.to }); break;
     case 'invite-partner-id': if (val('invite-id')) act('invite_partner', { to: val('invite-id') }); break;
@@ -270,6 +388,14 @@ root.addEventListener('click', (e) => {
     case 'accept': act('accept_partner', { from: d.from }); break;
     case 'decline': act('decline_partner', { from: d.from }).then(() => { state.invites.partner = state.invites.partner.filter((i) => i.from !== d.from); render(); }); break;
   }
+}
+for (const id of ['app', 'dock', 'sheet', 'overlay']) document.getElementById(id).addEventListener('click', onAction);
+
+// Enter sends a chat line
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || !e.target.id) return;
+  const btn = { 'pub-input': 'pubchat', 'chat-input': 'chat' }[e.target.id];
+  if (btn) { e.preventDefault(); const b = document.querySelector(`[data-act=${btn}]`); if (b) b.click(); }
 });
 
 setInterval(() => {
