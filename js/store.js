@@ -2,7 +2,7 @@
 import { LETTERS } from './config.js';
 
 export const initial = () => ({
-  me: null, offset: 0, gestures: [], profiles: {}, rooms: [], room: null, closed: null,
+  me: null, offset: 0, gestures: [], myGames: [], profiles: {}, rooms: [], room: null, closed: null,
   invites: { partner: [], room: [] },
 });
 
@@ -23,7 +23,7 @@ export const nameOf = (s, id) => (s.profiles[id] && s.profiles[id].name) || id;
 function newRoom(id) {
   return {
     id, creator: null, phase: 'lobby', players: {}, order: [], spectators: 0,
-    timers: [], countdownEndsAt: null, chat: [], pub: [], lastPubId: 0, seq: 0, signals: [], log: [], game: null,
+    timers: [], countdownEndsAt: null, chat: [], pub: [], lastPubId: 0, seq: 0, signals: [], epoch: 0, paused: null, log: [], game: null,
   };
 }
 
@@ -49,6 +49,7 @@ function fromSnapshot(s, d) {
   r.spectators = d.spectators;
   for (const p of d.players) { r.players[p.id] = p; r.order.push(p.id); }
   r.seq = d.seq || 0; // our message counter at the moment of the snapshot
+  if (d.pausedUntil) r.paused = { until: when(s, d.pausedUntil), players: d.players.filter((p) => !p.removed).map((p) => p.id) };
   r.pub = (d.chat || []).map((m) => ({ id: m.id, from: m.from, text: m.text, at: m.at }));
   r.lastPubId = r.pub.reduce((a, m) => Math.max(a, m.id), 0);
   r.timers = d.timers.map((t) => ({ kind: t.kind, player: t.player, endsAt: when(s, t.endsAt) }));
@@ -67,9 +68,9 @@ function fromSnapshot(s, d) {
 
 // A gesture someone made. scope: 'team' (only the sender's partner saw it), 'room', or '' for your own (you are not told).
 function addSignal(r, s, d, num, history) {
-  if (num !== undefined && r.signals.some((x) => x.s === num)) return; // already shown
+  if (num !== undefined && r.signals.some((x) => x.s === num && x.e === r.epoch)) return; // already shown
   const g = s.gestures.find((x) => x.id === d.gesture);
-  r.signals.push({ s: num, from: d.from, scope: d.scope || '', text: g ? g.seen : d.gesture, history });
+  r.signals.push({ s: num, e: r.epoch, from: d.from, scope: d.scope || '', text: g ? g.seen : d.gesture, history });
   if (r.signals.length > 100) r.signals.shift();
 }
 
@@ -95,8 +96,8 @@ export function applyMissed(prev, d) {
     for (const m of sr.pub) if (!known.has(m.id)) r.pub.push(m);
     r.pub.sort((a, b) => a.id - b.id);
     r.lastPubId = Math.max(r.lastPubId, sr.lastPubId);
-    for (const x of sr.signals) if (!r.signals.some((y) => y.s === x.s)) r.signals.push({ ...x, history: true });
-    r.signals.sort((a, b) => (a.s || 0) - (b.s || 0));
+    for (const x of sr.signals) if (!r.signals.some((y) => y.s === x.s && y.e === x.e)) r.signals.push({ ...x, history: true });
+    r.signals.sort((a, b) => (a.e - b.e) || ((a.s || 0) - (b.s || 0)));
     r.chat = sr.chat; // the private team chat is not in a snapshot, only in the history
     r.log = sr.log.slice(prev.room.log.length).map((l) => ({ text: '(missed) ' + l.text })).concat(r.log);
   }
@@ -124,6 +125,8 @@ export function reduce(prev, msg) {
         if (before) {
           // a snapshot only describes the present: keep what we had already seen
           s.room.chat = before.chat;
+          // message numbers start again from zero after a server restart: a lower seq than before means a new "epoch"
+          s.room.epoch = d.seq < before.seq ? before.epoch + 1 : before.epoch;
           s.room.signals = before.signals;
           s.room.log = before.log;
           const have = new Set(s.room.pub.map((m) => m.id));
@@ -132,6 +135,11 @@ export function reduce(prev, msg) {
         } else say(s, 'joined room ' + d.room);
       }
       s.closed = null;
+      s.myGames = s.myGames.filter((g) => g.room !== d.room);
+      break;
+    case 'my_games':
+      s.myGames = d.map((g) => ({ ...g, until: when(s, g.until) }));
+      for (const g of d) for (const p of g.players) s.profiles[p.id] = { id: p.id, name: p.name, style: p.style || null };
       break;
     case 'room_closed':
       s.closed = d.reason;
@@ -204,6 +212,12 @@ function reduceRoom(s, t, d, num) {
       if (r.game) { r.game.phase = 'waiting'; r.game.round = d.round; }
       say(s, 'team chat before round ' + d.round);
       break;
+    case 'paused':
+      r.paused = { until: when(s, d.until), players: d.players };
+      r.timers = []; // nothing runs while paused; fresh timers come after "resumed"
+      say(s, 'game paused: waiting for everyone to come back');
+      break;
+    case 'resumed': r.paused = null; r.timers = []; say(s, 'game resumed'); break;
     case 'chat_message': addPublic(r, d); break;
     case 'signal': addSignal(r, s, d, num, false); break;
     case 'ready_changed': if (r.players[d.player]) r.players[d.player].ready = d.ready; break;

@@ -147,9 +147,24 @@ function over(s) {
   </section>${publicChat(s)}`;
 }
 
+// The game is saved and waiting for everyone to come back (after a restart, or everyone dropping at once).
+function pausedView(s) {
+  const r = s.room, p = r.paused;
+  const ids = p.players.filter((id) => r.players[id] && !r.players[id].removed);
+  const back = ids.filter((id) => r.players[id].connected).length;
+  return `<section class="panel">
+    <div class="row between"><h2>Game paused</h2><button class="alt" data-act="leave">Leave</button></div>
+    <div class="prompt"><b>Waiting for everyone (${back} of ${ids.length} back).</b>
+      <div class="mute sm">The game picks up where it left off once all of you are here. It is given up in <b data-countdown="${p.until}">${clock(p.until - Date.now())}</b>.</div></div>
+    <div>${ids.map((id) => `<span class="who">${avatar((s.profiles[id] || {}).style, 28)}<span class="${r.players[id].connected ? 'ok' : 'warn'}">${esc(nameOf(s, id))}${r.players[id].connected ? ' ✓' : ' …'}</span></span>`).join(' ')}</div>
+    ${eventLog(r, 4)}
+  </section>${publicChat(s)}`;
+}
+
 export function table(s, ui) {
   const g = s.room.game;
   if (!g) return '<section class="panel"><p class="mute">Waiting for the game…</p></section>';
+  if (s.room.paused && g.phase !== 'over') return pausedView(s);
   if (s.room.phase === 'over' || g.phase === 'over') return over(s);
   if (g.phase === 'waiting') return chatPhase(s, ui);
   return play(s, ui);

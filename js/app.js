@@ -87,7 +87,7 @@ async function beforeConnect() {
 const net = new Net({ url: serverUrl(), getToken: token, beforeConnect });
 
 // Catching up after a reconnect: snapshot first, then ask for what we missed, then resend unanswered actions.
-let lastS = 0, resumeFrom = 0, helloSeen = false, awaitingSnap = false, catchTimer = null;
+let lastS = 0, resumeFrom = 0, helloSeen = false, wasReconnect = false, awaitingSnap = false, catchTimer = null;
 function track(m) {
   if (m.t === 'snapshot') lastS = m.d.seq || 0;
   else if (m.t === 'room_closed') lastS = 0;
@@ -96,12 +96,19 @@ function track(m) {
 function catchUp(gotSnap) {
   awaitingSnap = false;
   clearTimeout(catchTimer);
-  if (!gotSnap) { // no snapshot means the server no longer has us in a room
-    if (state.room) { state.room = null; state.invites = { partner: [], room: [] }; lastS = 0; render(); }
-    net.resendPending();
+  if (gotSnap) {
+    const r = state.room;
+    // After a server restart the message numbers start again from zero, and the room comes back paused. In
+    // either case the old "last seen" number means nothing, so rely on the snapshot alone.
+    const sameRun = wasReconnect && r && !r.paused && r.seq >= resumeFrom;
+    if (sameRun) net.request('resume', { after: resumeFrom }).catch(() => {}).finally(() => net.resendPending());
+    else net.resendPending();
     return;
   }
-  net.request('resume', { after: resumeFrom }).catch(() => {}).finally(() => net.resendPending());
+  // no snapshot: the server has no current room for us
+  if (state.room) { state.room = null; state.invites = { partner: [], room: [] }; lastS = 0; render(); }
+  net.resendPending();
+  net.request('my_games').catch(() => {}); // a paused game is not a current room; offer to go back to it
 }
 
 function act(type, fields) {
@@ -122,7 +129,11 @@ net.addEventListener('status', (e) => {
 net.addEventListener('message', (e) => {
   const m = e.detail;
   if (m.t === 'hello') {
-    if (helloSeen) { resumeFrom = lastS; awaitingSnap = true; clearTimeout(catchTimer); catchTimer = setTimeout(() => catchUp(false), 600); }
+    wasReconnect = helloSeen;
+    if (helloSeen) resumeFrom = lastS;
+    awaitingSnap = true;
+    clearTimeout(catchTimer);
+    catchTimer = setTimeout(() => catchUp(false), 600);
     helloSeen = true;
   }
   track(m);
@@ -177,7 +188,10 @@ function tryPendingJoin() {
 }
 
 function pollRooms() {
-  if (net.status === 'open' && state.me && !state.room) net.request('list_rooms').catch(() => {});
+  if (net.status === 'open' && state.me && !state.room) {
+    net.request('list_rooms').catch(() => {});
+    net.request('my_games').catch(() => {});
+  }
 }
 setInterval(pollRooms, 4000);
 
@@ -211,6 +225,7 @@ root.addEventListener('click', (e) => {
   switch (d.act) {
     case 'reload': location.reload(); break;
     case 'guide': openGuide(); break;
+    case 'resume-game': act('resume_game', { room: d.room }); break;
     case 'signal-palette': openPalette(state.gestures, (id) => act('signal', { gesture: id })); break;
     case 'watch-invited': { const room = ui.inviteNotice && ui.inviteNotice.room; ui.inviteNotice = null; if (room) act('spectate', { room }); render(); break; }
     case 'dismiss-notice': ui.inviteNotice = null; render(); break;

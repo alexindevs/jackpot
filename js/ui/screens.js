@@ -24,6 +24,17 @@ export function connecting(ui) {
   </section>`;
 }
 
+function resumeList(s) {
+  if (!s.myGames.length) return '';
+  return `<div class="prompt"><b>Resume your game</b>${s.myGames.map((g) => {
+    const back = g.players.filter((p) => p.here).length;
+    return `<div class="room"><div>Room <b>${esc(g.room)}</b>, round ${g.round}
+      <div class="mute sm">${g.players.map((p) => `<span class="${p.here ? 'ok' : 'warn'}">${esc(p.name)}${p.here ? ' ✓' : ' …'}</span>`).join(', ')}</div>
+      <div class="mute sm">${back} of ${g.players.length} back. Given up in <b data-countdown="${g.until}">${clock(g.until - Date.now())}</b></div></div>
+      <button data-act="resume-game" data-room="${esc(g.room)}">Resume</button></div>`;
+  }).join('')}</div>`;
+}
+
 export function rooms(s, ui) {
   const list = s.rooms.length
     ? s.rooms.map((r) => `<div class="room">
@@ -37,6 +48,7 @@ export function rooms(s, ui) {
       <div class="row"><button data-act="join" data-room="${esc(i.room)}">Join</button><button class="alt" data-act="dismiss-room-invite" data-n="${n}">Dismiss</button></div></div>`).join('');
   return `<section class="panel">
     <div class="row between"><h2>Rooms</h2><div class="row"><button data-act="create">Create room</button><button class="alt" data-act="guide">How to play</button><button class="alt" data-act="refresh">Refresh</button></div></div>
+    ${resumeList(s)}
     ${s.closed ? `<p class="warn">Your last room closed (${esc(s.closed)}).</p>` : ''}
     ${ui.inviteNotice && ui.inviteNotice.text ? `<div class="prompt"><div>${esc(ui.inviteNotice.text)}</div><div class="row" style="margin-top:6px">
       ${ui.inviteNotice.canWatch ? '<button data-act="watch-invited">Watch</button>' : ''}<button class="alt" data-act="dismiss-notice">Dismiss</button></div></div>` : ''}
