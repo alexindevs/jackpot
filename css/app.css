@@ -13,3 +13,22 @@ header.top .profile { margin-left:auto; }
 a.btn { display:inline-block; padding:8px 14px; border-radius:6px; background:var(--acc); color:#fff; text-decoration:none; }
 pre.log { height:140px; overflow:auto; font-size:12px; color:var(--mute); background:#0b0d11; padding:8px; border-radius:6px; white-space:pre-wrap; }
 #toast { position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:#2a2f3a; padding:10px 16px; border-radius:8px; max-width:90vw; }
+.ring { position:relative; height:min(78vw, 360px); margin:8px 0; }
+.seat { position:absolute; transform:translate(-50%,-50%); text-align:center; width:84px; background:#12151b; border-radius:10px; padding:4px; border:2px solid transparent; }
+.seat.holder { border-color:var(--warn); }
+.seat.me { background:#1c2330; }
+.seat.out { opacity:.4; }
+.seat .nm { font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sm { font-size:11px; }
+.seat button.sm { padding:2px 6px; margin-top:2px; }
+.t0 { --team:#60a5fa; } .t1 { --team:#f472b6; } .t2 { --team:#4ade80; } .t3 { --team:#fbbf24; } .t4 { --team:#c084fc; }
+.seat:not(.holder) { border-color:transparent; } .seat .nm { color:var(--team, var(--fg)); }
+.score { display:flex; flex-direction:column; gap:4px; margin:6px 0; }
+.team { display:flex; justify-content:space-between; gap:8px; align-items:center; font-size:13px; }
+.team.out { opacity:.4; text-decoration:line-through; }
+.letters i { font-style:normal; display:inline-block; width:18px; text-align:center; color:#3a4050; font-weight:700; }
+.letters i.on { color:var(--team, var(--ok)); }
+.hand { text-align:center; margin:8px 0; }
+.card small { font-size:11px; margin-left:2px; color:var(--mute); }
+.prompt { background:#2a2312; border:1px solid var(--warn); border-radius:8px; padding:8px; margin:8px 0; }
+.chat { background:#0b0d11; border-radius:6px; padding:8px; min-height:90px; max-height:200px; overflow:auto; margin:8px 0; font-size:13px; }

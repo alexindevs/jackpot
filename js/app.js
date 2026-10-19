@@ -1,10 +1,11 @@
 // The real client. Boots the session, opens the socket, and draws whichever screen the state calls for.
 import { Net } from './net.js';
-import { initial, reduce } from './store.js';
+import { initial, reduce, nameOf } from './store.js';
 import { serverUrl, devName } from './config.js';
 import { readSession, clearSession, signInUrl, connectPage } from './startng.js';
 import { clock } from './ui/dom.js';
 import * as screens from './ui/screens.js';
+import { table } from './ui/table.js';
 
 const root = document.getElementById('app');
 const toastEl = document.getElementById('toast');
@@ -15,11 +16,15 @@ const ERRORS = {
   too_few_players: 'You need at least two teams.', unpaired_players: 'Everyone needs a partner first.',
   already_paired: 'Already on a team.', already_invited: 'You already invited them.', no_invite: 'That invite is gone.',
   bad_target: "You can't do that with that player.", not_player: 'Only players can do that.', wrong_phase: 'Not possible right now.',
+  not_holder: 'You do not hold the passing card.', no_such_card: "You don't have that card.", no_points: 'No suspicion points left.',
+  self_suspect: "You can't suspect yourself.", busy: 'Someone is already answering a suspicion.', bad_reveal: 'That is not a valid answer.',
+  proclaim_revoked: 'You lost the right to proclaim this round.', partner_holds_passing_card: 'Your partner holds the passing card.',
+  game_over: 'The game is over.', nothing_to_answer: 'Nothing to answer.', bad_text: 'That message cannot be sent.',
   rate_limited: 'Slow down a little.', closed: 'Not connected.', timeout: 'The server did not answer.',
 };
 
 let state = initial();
-const ui = { status: 'closed', identity: null, notice: null, blocked: false, signInUrl: signInUrl() };
+const ui = { sel: [], status: 'closed', identity: null, notice: null, blocked: false, signInUrl: signInUrl() };
 const dev = devName();
 let session = dev ? null : readSession();
 const token = () => (dev ? 'dev:' + dev : session);
@@ -49,6 +54,9 @@ net.addEventListener('message', (e) => {
   state = reduce(state, e.detail);
   if (e.detail.t === 'error' && e.detail.id === undefined) toast((e.detail.d || {}).message || 'Error');
   if (e.detail.t === 'hello') pollRooms();
+  if (e.detail.t === 'partner_invite' && e.detail.d.to === state.me) toast(nameOf(state, e.detail.d.from) + ' wants you as a partner');
+  if (e.detail.t === 'room_invite') toast(nameOf(state, e.detail.d.from) + ' invited you to a room');
+  if (e.detail.t === 'game_event' && (e.detail.kind === 'suspicion_failed' || e.detail.kind === 'suspicion_freed')) ui.sel = [];
   render();
 });
 
@@ -63,7 +71,7 @@ function view() {
   if (!state.me) return '<section class="panel center"><p class="mute">Connecting…</p></section>';
   if (!state.room) return screens.rooms(state, ui);
   if (state.room.phase === 'lobby') return screens.lobby(state, ui);
-  return screens.game(state);
+  return table(state, ui);
 }
 
 function render() {
@@ -96,6 +104,19 @@ root.addEventListener('click', (e) => {
     case 'invite-partner': act('invite_partner', { to: d.to }); break;
     case 'invite-partner-id': if (val('invite-id')) act('invite_partner', { to: val('invite-id') }); break;
     case 'invite-room': if (val('invite-id')) act('invite_room', { to: val('invite-id') }); break;
+    case 'pass': act('pass', { card: +d.card }); break;
+    case 'suspect': act('suspect', { target: d.target }); break;
+    case 'proclaim': act('proclaim'); break;
+    case 'vote-end': act('vote_end', { agree: d.agree === 'true' }); break;
+    case 'ready': act('ready', { ready: d.ready === 'true' }); break;
+    case 'chat': { const v = val('chat-input'); if (v) { act('team_chat', { text: v }); document.getElementById('chat-input').value = ''; } break; }
+    case 'reveal-toggle': {
+      const c = +d.card;
+      ui.sel = ui.sel.includes(c) ? ui.sel.filter((x) => x !== c) : [...ui.sel, c];
+      render();
+      break;
+    }
+    case 'reveal-send': act('reveal', { types: ui.sel }).then(() => { ui.sel = []; render(); }); break;
     case 'accept': act('accept_partner', { from: d.from }); break;
     case 'decline': act('decline_partner', { from: d.from }).then(() => { state.invites.partner = state.invites.partner.filter((i) => i.from !== d.from); render(); }); break;
   }
@@ -117,4 +138,5 @@ async function boot() {
   if (token()) net.connect();
   render();
 }
+if (dev) window.__jackpot = { get state() { return state; } }; // read-only view for tests, dev sign-in only
 boot();

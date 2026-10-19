@@ -70,17 +70,6 @@ export function lobby(s, ui) {
   </section>`;
 }
 
-// Placeholder until the table screen (M3).
-export function game(s) {
-  const r = s.room, g = r.game;
-  return `<section class="panel">
-    <div class="row between"><h2>Room ${esc(r.id)} <span class="tag">${esc(r.phase)}</span></h2><button class="alt" data-act="leave">Leave</button></div>
-    <p class="mute">The table screen is coming. Use /dev/ to play a full game for now.</p>
-    ${g ? `<p>Round ${g.round}, holder ${esc(g.holder || '-')}</p>` : ''}
-    <pre class="log">${esc(r.log.slice(-12).map((l) => l.text).join('\n'))}</pre>
-  </section>`;
-}
-
 export function header(s, ui) {
   const st = { open: 'connected', connecting: 'connecting…', waiting: 'reconnecting…', closed: 'offline' }[ui.status] || ui.status;
   return `<header class="top"><b>jackpot</b>${ui.identity ? profileCard(ui.identity) : ''}<span class="mute">${st}</span></header>`;
