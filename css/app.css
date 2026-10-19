@@ -24,8 +24,8 @@ pre.log { height:140px; overflow:auto; font-size:12px; color:var(--mute); backgr
 .t0 { --team:#60a5fa; } .t1 { --team:#f472b6; } .t2 { --team:#4ade80; } .t3 { --team:#fbbf24; } .t4 { --team:#c084fc; }
 .seat:not(.holder) { border-color:transparent; } .seat .nm { color:var(--team, var(--fg)); }
 .score { display:flex; flex-direction:column; gap:4px; margin:6px 0; }
-.team { display:flex; justify-content:space-between; gap:8px; align-items:center; font-size:13px; }
-.team.out { opacity:.4; text-decoration:line-through; }
+.score-team { display:flex; justify-content:space-between; gap:8px; align-items:center; font-size:13px; }
+.score-team.out { opacity:.4; text-decoration:line-through; }
 .letters i { font-style:normal; display:inline-block; width:18px; text-align:center; color:#3a4050; font-weight:700; }
 .letters i.on { color:var(--team, var(--ok)); }
 .hand { text-align:center; margin:8px 0; }
@@ -34,7 +34,7 @@ pre.log { height:140px; overflow:auto; font-size:12px; color:var(--mute); backgr
 .chat { background:#0b0d11; border-radius:6px; padding:8px; min-height:90px; max-height:200px; overflow:auto; margin:8px 0; font-size:13px; }
 h3 { margin:8px 0 4px; font-size:14px; }
 .tag.priv { color:var(--warn); border-color:var(--warn); }
-.chat.team { border-left:3px solid var(--warn); }
+.chat.private { border-left:3px solid var(--warn); }
 .panel.pub { border-left:3px solid var(--acc); }
 .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.65); display:flex; align-items:center; justify-content:center; padding:16px; z-index:50; }
 .modal { background:var(--card); border-radius:12px; width:min(560px, 100%); max-height:min(86vh, 720px); display:flex; flex-direction:column; box-shadow:0 10px 40px rgba(0,0,0,.5); }
@@ -49,5 +49,5 @@ h3 { margin:8px 0 4px; font-size:14px; }
 .gestures { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; }
 .gestures button { font-size:13px; padding:4px 8px; }
 .feed { background:#0b0d11; border-radius:8px; padding:6px 10px; margin:8px 0; font-size:13px; }
-.sig.team { color:var(--warn); }
+.sig.private { color:var(--warn); }
 .sig.hist { opacity:.65; }

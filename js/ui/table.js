@@ -21,7 +21,7 @@ function scoreboard(s) {
     const w = g.wins[t] || 0;
     const letters = [...LETTERS].map((l, i) => `<i class="${i < w ? 'on' : ''}">${l}</i>`).join('');
     const out = teams[t].every((id) => r.players[id].removed);
-    return `<div class="team t${t % 5}${out ? ' out' : ''}"><span class="mute">${teams[t].map((id) => esc(nameOf(s, id))).join(' & ')}</span><span class="letters">${letters}</span></div>`;
+    return `<div class="score-team t${t % 5}${out ? ' out' : ''}"><span class="mute">${teams[t].map((id) => esc(nameOf(s, id))).join(' & ')}</span><span class="letters">${letters}</span></div>`;
   }).join('') + '</div>';
 }
 
@@ -74,7 +74,7 @@ function chatPhase(s, ui) {
   return `<section class="panel">
     <div class="row between"><h2>Round ${g.round + (g.round === 0 ? 1 : 0)} starts in ${countdown(t)}</h2><button class="alt" data-act="leave">Leave</button></div>
     ${scoreboard(s)}
-    ${mine && !mine.removed ? `<h3>Team chat <span class="tag priv">only your partner sees this</span></h3><div class="chat team">${msgs}</div>
+    ${mine && !mine.removed ? `<h3>Team chat <span class="tag priv">only your partner sees this</span></h3><div class="chat private">${msgs}</div>
       <div class="row"><input id="chat-input" placeholder="message your partner" size="24" maxlength="500" autocomplete="off"><button data-act="chat">Send</button></div>
       <div class="row" style="margin-top:10px"><button data-act="ready" data-ready="${mine.ready ? 'false' : 'true'}">${mine.ready ? 'Not ready' : 'Ready'}</button>
         <span class="mute">${r.order.filter((id) => r.players[id].ready).length}/${r.order.filter((id) => !r.players[id].removed).length} ready. Everyone ready skips the wait.</span></div>`
@@ -97,7 +97,7 @@ function signalFeed(s) {
   const r = s.room;
   const items = r.signals.slice(-8).map((x) => {
     const who = x.from === s.me ? 'You' : esc(nameOf(s, x.from));
-    return `<div class="sig${x.scope === 'team' ? ' team' : ''}${x.history ? ' hist' : ''}">${x.scope === 'team' ? '<span title="Only you saw this. The other team did not.">🔒</span> ' : ''}<b>${who}</b> ${esc(x.text)}${x.history ? ' <span class="mute sm">(earlier)</span>' : ''}</div>`;
+    return `<div class="sig${x.scope === 'team' ? ' private' : ''}${x.history ? ' hist' : ''}">${x.scope === 'team' ? '<span title="Only you saw this. The other team did not.">🔒</span> ' : ''}<b>${who}</b> ${esc(x.text)}${x.history ? ' <span class="mute sm">(earlier)</span>' : ''}</div>`;
   }).join('');
   return `<div class="feed"><div class="mute sm">Signals${r.signals.some((x) => x.scope === 'team') ? ' (🔒 = only you saw it)' : ''}</div>${items || '<div class="mute sm">None yet.</div>'}</div>`;
 }
