@@ -83,7 +83,7 @@ function topbar(s, ui, title) {
   return `<div class="topbar"><span class="rnd">${title}</span>${bad ? `<span class="conn warn">● ${ui.status === 'waiting' ? 'reconnecting…' : 'offline'}</span>` : ''}</div>`;
 }
 
-function seatRing(s, canSuspect) {
+function seatRing(s, canSuspect, suspecting) {
   const r = s.room, g = r.game, me = s.me;
   const ring = g.seats.length ? g.seats : r.order;
   const n = ring.length;
@@ -108,7 +108,7 @@ function seatRing(s, canSuspect) {
       ${p.connected === false ? `<div class="bad sm">offline ${countdown(rc)}</div>` : ''}
       ${pending ? '<div class="warn sm">answering…</div>' : ''}
       ${hand && id !== me ? `<div class="sm">${handHtml(hand)}</div>` : ''}
-      ${canSuspect && id !== me && !p.removed ? `<button class="alt sm" data-act="suspect" data-target="${esc(id)}">Suspect</button>` : ''}
+      ${canSuspect && id !== me && !p.removed ? `<button class="alt sm" data-act="suspect" data-target="${esc(id)}"${suspecting ? ' disabled' : ''}>${suspecting === id ? '…' : 'Suspect'}</button>` : ''}
     </div>`;
   }).join('') + '</div>';
 }
@@ -141,7 +141,7 @@ function play(s, ui) {
   return `<div class="stage">
     ${topbar(s, ui, `Round ${g.round}`)}
     ${scoreboard(s)}
-    <div class="mid">${seatRing(s, canAct)}</div>
+    <div class="mid">${seatRing(s, canAct, ui.suspecting)}</div>
     <div class="controls">
       ${spectator ? '<div class="mute center sm">You are watching</div>' : `
         ${forced ? `<div class="prompt"><b>You were caught.</b> Pass a card first ${countdown(timerOf(r, 'forced', me))}</div>` : ''}

@@ -65,7 +65,7 @@ function inviteLink(roomId) {
 }
 
 let state = initial();
-const ui = { sheet: null, dockOpen: false, unread: { chat: 0, team: 0 }, logTab: 'events', sigQuery: '', over: null, inviteLink, guest: guestArrival, pendingRoom, inviteNotice: null, retryIn: 0, sel: [], status: 'closed', identity: null, notice: null, blocked: false, signInUrl: signInUrl() };
+const ui = { sheet: null, dockOpen: false, unread: { chat: 0, team: 0 }, logTab: 'events', sigQuery: '', over: null, inviteLink, guest: guestArrival, pendingRoom, inviteNotice: null, retryIn: 0, sel: [], suspecting: null, status: 'closed', identity: null, notice: null, blocked: false, signInUrl: signInUrl() };
 const dev = devName();
 let session = dev ? null : readSession();
 const token = () => (dev ? 'dev:' + dev : session);
@@ -372,7 +372,13 @@ function runAction(d) {
     case 'invite-partner-id': if (val('invite-id')) act('invite_partner', { to: val('invite-id') }); break;
     case 'invite-room': if (val('invite-id')) act('invite_room', { to: val('invite-id') }); break;
     case 'pass': act('pass', { card: +d.card }); break;
-    case 'suspect': act('suspect', { target: d.target }); break;
+    case 'suspect': {
+      if (ui.suspecting) break; // every tap is a new request, so lock until the server answers
+      ui.suspecting = d.target;
+      render();
+      act('suspect', { target: d.target }).finally(() => { ui.suspecting = null; render(); });
+      break;
+    }
     case 'proclaim': act('proclaim'); break;
     case 'vote-end': act('vote_end', { agree: d.agree === 'true' }); break;
     case 'ready': act('ready', { ready: d.ready === 'true' }); break;
