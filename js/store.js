@@ -36,7 +36,7 @@ function newGame() {
 }
 
 function setTimer(room, t) {
-  room.timers = room.timers.filter((x) => !(x.kind === t.kind && (t.kind === 'reconnect' ? x.player === t.player : true)));
+  room.timers = room.timers.filter((x) => !(x.kind === t.kind && (t.kind === 'reconnect' || t.kind === 'proclaim' ? x.player === t.player : true)));
   room.timers.push(t);
 }
 const dropTimers = (room, kind, player) =>
@@ -63,6 +63,7 @@ function fromSnapshot(s, d) {
       ...newGame(), round: g.round, phase: g.phase, holder: g.holder, seats: g.seats,
       wins: g.wins, points: g.points, hand: g.yourHand || [0, 0, 0, 0], hands: g.hands || {},
       pendingReveals: g.pendingReveals, forcedPass: g.forcedPass || '', winsToFinish: d.short ? 4 : 7, // the snapshot has no winsToFinish
+      proclaimRevoked: Object.fromEntries(r.timers.filter((t) => t.kind === 'proclaim').map((t) => [t.player, true])),
     };
   }
   return r;
@@ -251,6 +252,7 @@ function reduceEvent(s, kind, d) {
     case 'round_started':
       g.round = d.round; g.holder = d.holder; g.phase = 'playing'; g.reveal = null; g.forcedPass = '';
       g.pendingReveals = []; g.proclaimRevoked = {};
+      dropTimers(r, 'proclaim'); // a lockout ends with the round
       for (const id of Object.keys(g.points)) g.points[id] = g.suspicionPoints;
       r.phase = 'playing';
       dropTimers(r, 'chat');
@@ -295,11 +297,15 @@ function reduceEvent(s, kind, d) {
     case 'false_proclaim':
       g.points[d.by] = d.pointsLeft;
       if (d.revoked) g.proclaimRevoked[d.by] = true;
-      say(s, n(d.by) + ' proclaimed falsely' + (d.revoked ? ' and loses the right to proclaim' : ''));
+      say(s, n(d.by) + ' proclaimed falsely' + (d.revoked ? ' and cannot proclaim for 3 minutes' : ''));
+      break;
+    case 'proclaim_restored':
+      delete g.proclaimRevoked[d.player]; dropTimers(r, 'proclaim', d.player);
+      say(s, n(d.player) + ' can proclaim again');
       break;
     case 'round_won':
       g.wins[d.team] = d.wins; g.phase = 'waiting'; g.holder = ''; // d.wins is the winning team's new total
-      for (const k of ['hold', 'reveal', 'forced']) dropTimers(r, k);
+      for (const k of ['hold', 'reveal', 'forced', 'proclaim']) dropTimers(r, k);
       g.pendingReveals = []; g.reveal = null; g.forcedPass = '';
       say(s, 'team ' + d.team + ' wins the round (' + (d.letter || LETTERS[d.wins - 1]) + '), proclaimed by ' + n(d.proclaimer));
       break;

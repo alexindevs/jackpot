@@ -134,8 +134,7 @@ function play(s, ui) {
   const canAct = !spectator && g.phase === 'playing';
   const revoked = g.proclaimRevoked[me];
   const partnerHolds = partner && g.holder === partner;
-  const hint = revoked ? 'You can no longer proclaim this round.'
-    : partnerHolds ? 'Your partner holds the passing card, so they cannot win yet.'
+  const hint = partnerHolds ? 'Your partner holds the passing card, so they cannot win yet.'
     : iHold ? 'You hold the passing card: pass one card.'
     : '';
   return `<div class="stage">
@@ -148,7 +147,7 @@ function play(s, ui) {
         ${revealPrompt(g, ui, r)}
         <div class="hand">${handHtml(g.hand)}</div>
         <div class="row center">${(iHold || forced) ? g.hand.map((c, t) => (c ? `<button class="alt" data-act="pass" data-card="${t}">Pass ${CARDS[t].glyph}</button>` : '')).join('') : `<span class="mute sm">${esc(hint) || '&nbsp;'}</span>`}</div>
-        <button class="wide" data-act="proclaim" ${canAct && !revoked && !partnerHolds ? '' : 'disabled'}>Jackpot for ${esc(nameOf(s, partner))}!</button>`}
+        <button class="wide" data-act="proclaim" ${canAct && !revoked && !partnerHolds ? '' : 'disabled'}>${revoked ? `Jackpot locked ${countdown(timerOf(r, 'proclaim', me))}` : `Jackpot for ${esc(nameOf(s, partner))}!`}</button>`}
     </div>
   </div>`;
 }
