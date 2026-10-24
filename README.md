@@ -18,7 +18,7 @@ Start the server in dev mode, then serve this folder with any static server:
     python3 -m http.server 3000                                      # in this repo
 
 - Client as a dev player: `http://localhost:3000/?dev=alice`
-- Harness: `http://localhost:3000/dev/` (press "Scenario" to start a game with four seats)
+- Harness: `http://localhost:3000/dev/` (press "Connect all", then "Scenario" to start a game with four seats)
 
 `?dev=<name>` signs in as `dev:<name>`, which only a dev-mode server accepts. On start.ng the client uses the player's real session.
 
