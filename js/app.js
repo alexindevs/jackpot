@@ -23,7 +23,7 @@ const ERRORS = {
   bad_target: "You can't do that with that player.", not_player: 'Only players can do that.', wrong_phase: 'Not possible right now.',
   not_holder: 'You do not hold the passing card.', no_such_card: "You don't have that card.", no_points: 'No suspicion points left.',
   self_suspect: "You can't suspect yourself.", busy: 'Someone is already answering a suspicion.', bad_reveal: 'That is not a valid answer.',
-  proclaim_revoked: 'You lost the right to proclaim this round.', partner_holds_passing_card: 'Your partner holds the passing card.',
+  proclaim_revoked: "You can't call Jackpot again this round.", partner_holds_passing_card: 'Your partner is holding the passing card.',
   game_over: 'The game is over.', nothing_to_answer: 'Nothing to answer.', bad_text: 'That message cannot be sent.',
   slow_down: 'Slow down a little.', rate_limited: 'Slow down a little.', closed: 'Not connected.', timeout: 'The server did not answer.',
 };
@@ -166,7 +166,11 @@ function announce(m, before) {
   else if (m.kind === 'suspicion_raised') popup(`<b>${esc(n(d.by))}</b> ${d.by === state.me ? 'suspect' : 'suspects'} <b>${esc(n(d.target))}</b>`, 'warn');
   else if (m.kind === 'suspicion_freed') popup(`<b>${esc(n(d.target))}</b> ${d.target === state.me ? 'were' : 'was'} cleared`);
   else if (m.kind === 'suspicion_failed') popup(`<b>${esc(n(d.target))}</b> ${d.target === state.me ? 'were' : 'was'} caught!`, 'bad');
-  else if (m.kind === 'false_proclaim') popup(`<b>${esc(n(d.by))}</b> called Jackpot falsely`, 'bad');
+  else if (m.kind === 'false_proclaim') {
+    // "no longer": a suspicion can reset the partner just before the call lands, so the caller did see four a moment ago
+    if (d.by === state.me) popup(`Your partner no longer holds four of a kind. ${d.revoked ? "You can't call again this round." : `${d.pointsLeft} point${d.pointsLeft === 1 ? '' : 's'} left.`}`, 'bad');
+    else popup(`<b>${esc(n(d.by))}</b> called Jackpot falsely`, 'bad');
+  }
   else if (m.kind === 'team_removed') popup('A team left the game', 'warn');
   else if (m.kind === 'round_won') {
     const mine = myTeam(state) === d.team;
