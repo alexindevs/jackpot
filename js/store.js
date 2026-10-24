@@ -232,7 +232,10 @@ function reduceRoom(s, t, d, num) {
       if (d.player === s.me) r.game.hand = d.hand;
       r.game.hands[d.player] = d.hand;
       break;
-    case 'timer_started': setTimer(r, { kind: d.kind, player: d.player, endsAt: when(s, d.endsAt) }); break;
+    case 'timer_started':
+      setTimer(r, { kind: d.kind, player: d.player, endsAt: when(s, d.endsAt) });
+      if (d.kind === 'proclaim' && r.game) r.game.proclaimRevoked[d.player] = true; // also how a lockout comes back after a pause
+      break;
     case 'connection_changed':
       if (r.players[d.player]) r.players[d.player].connected = d.connected;
       dropTimers(r, 'reconnect', d.player);
