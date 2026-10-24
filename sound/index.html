@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>jackpot sounds</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/app.css">
+<style>
+  #cues { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:8px; max-width:720px; }
+  #cues button { padding:12px; text-align:left; }
+</style>
+</head>
+<body>
+<div id="cues"></div>
+<div id="sound"></div>
+<script type="module">
+import { CUES, preview } from '../js/sound.js';
+import { mountSoundBar } from '../js/ui/soundbar.js';
+mountSoundBar(document.getElementById('sound'));
+const box = document.getElementById('cues');
+for (const [name, cue] of Object.entries(CUES)) {
+  const b = document.createElement('button');
+  b.textContent = cue.label;
+  b.dataset.cue = name;
+  b.addEventListener('click', () => preview(name));
+  box.append(b);
+}
+</script>
+</body>
+</html>

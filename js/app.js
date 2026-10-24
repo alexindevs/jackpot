@@ -8,8 +8,11 @@ import * as screens from './ui/screens.js';
 import { table, screenKind, isPlayer, teamNames, myTeam } from './ui/table.js';
 import { openGuide } from './ui/guide.js';
 import { renderDock, renderSheet, popup, banner } from './ui/sheets.js';
+import { cueFor, play } from './sound.js';
+import { mountSoundBar } from './ui/soundbar.js';
 
 const root = document.getElementById('app');
+mountSoundBar(document.getElementById('sound'));
 const toastEl = document.getElementById('toast');
 
 const ERRORS = {
@@ -119,8 +122,12 @@ function act(type, fields) {
   return net.request(type, fields).catch((e) => toast(ERRORS[e.code] || e.message));
 }
 
+// A muted or away player still sees the game start: the tab title changes until they are back.
+const TITLE = document.title;
+const alertTitle = (text) => { if (document.hidden) document.title = text; };
+
 // back on the tab, or the network is back: make sure the connection is really alive
-document.addEventListener('visibilitychange', () => { if (!document.hidden) net.checkNow(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { document.title = TITLE; net.checkNow(); } });
 window.addEventListener('online', () => net.checkNow());
 window.addEventListener('focus', () => net.checkNow());
 
@@ -139,6 +146,9 @@ net.addEventListener('status', (e) => {
 function announce(m, before) {
   const r = state.room;
   if (!r) return;
+  const cue = cueFor(m, { me: state.me, player: isPlayer(state), myTeam: myTeam(state), lobby: r.phase === 'lobby' });
+  if (cue) play(cue);
+  if (m.t === 'game_starting') { banner('<div class="big">Game starting</div>'); alertTitle('▶ Game starting'); }
   const n = (id) => (id === state.me ? 'You' : nameOf(state, id));
   if (m.t === 'chat_message' && m.d.from !== state.me && ui.sheet !== 'chat') ui.unread.chat++;
   if (m.t === 'team_chat_message' && m.d.from !== state.me && ui.sheet !== 'team') ui.unread.team++;
