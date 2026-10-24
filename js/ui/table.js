@@ -72,7 +72,7 @@ function scoreboard(s) {
   for (const id of r.order) { const p = r.players[id]; if (p.partner) (teams[p.team] = teams[p.team] || []).push(id); }
   return '<div class="score">' + Object.keys(teams).map((t) => {
     const w = g.wins[t] || 0;
-    const letters = [...LETTERS].map((l, i) => `<i class="${i < w ? 'on' : ''}">${l}</i>`).join('');
+    const letters = [...LETTERS.slice(0, g.winsToFinish)].map((l, i) => `<i class="${i < w ? 'on' : ''}">${l}</i>`).join('');
     const out = teams[t].every((id) => r.players[id].removed);
     return `<div class="score-team t${t % 5}${out ? ' out' : ''}"><span class="nm">${teams[t].map((id) => esc(nameOf(s, id))).join(' & ')}</span><span class="letters">${letters}</span></div>`;
   }).join('') + '</div>';

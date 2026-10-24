@@ -5,7 +5,7 @@ const glyphs = CARDS.map((c) => `<span class="g">${c.glyph}</span>`).join(' ');
 
 const BODY = `
   <h3>The goal</h3>
-  <p>You play in a team of two. Collect <b>four cards of the same type</b>, then let your partner know. Your partner shouts <b>"Jackpot"</b> for you. Each round you win earns your team the next letter of <b>J-A-C-K-P-O-T</b>. The first team to spell it wins.</p>
+  <p>You play in a team of two. Collect <b>four cards of the same type</b>, then let your partner know. Your partner shouts <b>"Jackpot"</b> for you. Each round you win earns your team the next letter of <b>J-A-C-K-P-O-T</b> (<b>J-A-C-K</b> in a short game). The first team to spell it wins.</p>
 
   <h3>The cards</h3>
   <p>There are four types: ${glyphs}. Everyone starts with one of each. One player also gets a fifth card, the <b>passing card</b>.</p>
@@ -33,7 +33,7 @@ const BODY = `
   </ul>
 
   <h3>Ending the game</h3>
-  <p>The first team to <b>7 round wins</b> takes the game. Teams can also vote to end early: a team only counts as agreeing when <b>both</b> partners agree, and a majority of teams is needed. At an early end, the most wins takes it, and a tie is a draw.</p>
+  <p>The first team to <b>7 round wins</b> (4 in a short game) takes the game. Teams can also vote to end early: a team only counts as agreeing when <b>both</b> partners agree, and a majority of teams is needed. At an early end, the most wins takes it, and a tie is a draw.</p>
 
   <h3>Leaving or losing connection</h3>
   <p>If you lose connection you have <b>90 seconds</b> to come back, and you'll land right where you were. If you leave on purpose, your whole team is out straight away. When only one team is left, it wins by forfeit.</p>

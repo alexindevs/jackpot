@@ -7,6 +7,7 @@ import { clock, esc } from './ui/dom.js';
 import * as screens from './ui/screens.js';
 import { table, screenKind, isPlayer, teamNames, myTeam } from './ui/table.js';
 import { openGuide } from './ui/guide.js';
+import { openNewRoom } from './ui/newroom.js';
 import { renderDock, renderSheet, popup, banner } from './ui/sheets.js';
 import { cueFor, play } from './sound.js';
 import { mountSoundBar } from './ui/soundbar.js';
@@ -363,7 +364,7 @@ function runAction(d) {
       );
       break;
     }
-    case 'create': act('create_room'); break;
+    case 'create': openNewRoom((short) => act('create_room', short ? { short: true } : undefined)); break;
     case 'refresh': pollRooms(); break;
     case 'join': act('join', { room: d.room }); break;
     case 'spectate': act('spectate', { room: d.room }); break;

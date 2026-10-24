@@ -48,7 +48,7 @@ function resumeList(s) {
 export function rooms(s, ui) {
   const list = s.rooms.length
     ? s.rooms.map((r) => `<div class="room">
-        <div><b>${esc(r.id)}</b> <span class="tag">${esc(r.phase)}</span><div class="mute">${r.players} players, ${r.teams} teams, ${r.spectators} watching</div></div>
+        <div><b>${esc(r.id)}</b> <span class="tag">${esc(r.phase)}</span><span class="tag">${r.short ? 'short' : 'long'}</span><div class="mute">${r.players} players, ${r.teams} teams, ${r.spectators} watching</div></div>
         <div class="row">
           ${r.joinable ? `<button data-act="join" data-room="${esc(r.id)}">Join</button>` : ''}
           <button class="alt" data-act="spectate" data-room="${esc(r.id)}">Watch</button>
@@ -91,7 +91,7 @@ export function lobby(s, ui) {
     : `<p class="mute">${r.order.length < 4 ? 'The countdown starts at 4 players.' : 'Waiting for the countdown.'}</p>`;
   const canStart = r.creator === me && teams >= 2 && unpaired.length === 0 && !r.paused;
   return `<section class="panel">
-    <div class="row between"><h2>Room ${esc(r.id)}</h2><div class="row"><button class="alt" data-act="guide">How to play</button><button class="alt" data-act="leave">Leave</button></div></div>
+    <div class="row between"><h2>Room ${esc(r.id)}<span class="tag">${r.short ? 'short' : 'long'}</span></h2><div class="row"><button class="alt" data-act="guide">How to play</button><button class="alt" data-act="leave">Leave</button></div></div>
     ${spectating ? '<p class="warn">You are watching this room.</p>' : ''}
     ${r.paused ? (() => { const ids = r.paused.players.filter((id) => r.players[id] && !r.players[id].removed); const back = ids.filter((id) => r.players[id].connected).length;
       return `<div class="prompt"><b>Lobby paused: waiting for everyone (${back} of ${ids.length} back).</b>

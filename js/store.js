@@ -22,7 +22,7 @@ export const nameOf = (s, id) => (s.profiles[id] && s.profiles[id].name) || id;
 
 function newRoom(id) {
   return {
-    id, creator: null, phase: 'lobby', players: {}, order: [], spectators: 0,
+    id, creator: null, short: false, phase: 'lobby', players: {}, order: [], spectators: 0,
     timers: [], countdownEndsAt: null, chat: [], pub: [], lastPubId: 0, seq: 0, signals: [], epoch: 0, paused: null, log: [], game: null,
   };
 }
@@ -45,6 +45,7 @@ const dropTimers = (room, kind, player) =>
 function fromSnapshot(s, d) {
   const r = newRoom(d.room);
   r.creator = d.creator;
+  r.short = !!d.short;
   r.phase = d.phase;
   r.spectators = d.spectators;
   for (const p of d.players) { r.players[p.id] = p; r.order.push(p.id); }
@@ -61,7 +62,7 @@ function fromSnapshot(s, d) {
     r.game = {
       ...newGame(), round: g.round, phase: g.phase, holder: g.holder, seats: g.seats,
       wins: g.wins, points: g.points, hand: g.yourHand || [0, 0, 0, 0], hands: g.hands || {},
-      pendingReveals: g.pendingReveals, forcedPass: g.forcedPass || '',
+      pendingReveals: g.pendingReveals, forcedPass: g.forcedPass || '', winsToFinish: d.short ? 4 : 7, // the snapshot has no winsToFinish
     };
   }
   return r;

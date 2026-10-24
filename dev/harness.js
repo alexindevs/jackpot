@@ -139,7 +139,7 @@ function render(seat) {
     h += '<div class="row"><button data-a="start">start_now</button></div>';
   }
   if (g) {
-    const letters = Object.entries(g.wins).map(([t, w]) => 'team' + t + ' ' + LETTERS.slice(0, w).padEnd(7, '·')).join('  ');
+    const letters = Object.entries(g.wins).map(([t, w]) => 'team' + t + ' ' + LETTERS.slice(0, w).padEnd(g.winsToFinish || 7, '·')).join('  ');
     h += `<div>Round ${g.round} <i>${g.phase}</i> holder <b>${esc(g.holder || '-')}</b> | ${letters}</div>`;
     h += '<div>' + cardsHtml(g.hand) + '</div>';
     h += '<div class="row">' + g.hand.map((c, t) => c && g.phase === 'playing' ? `<button class="alt" data-a="pass" data-c="${t}">pass ${CARDS[t].glyph}</button>` : '').join('') + '</div>';
