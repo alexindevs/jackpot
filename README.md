@@ -19,6 +19,7 @@ Start the server in dev mode, then serve this folder with any static server:
 
 - Client as a dev player: `http://localhost:3000/?dev=alice`
 - Harness: `http://localhost:3000/dev/` (press "Connect all", then "Scenario" to start a game with four seats)
+- Restart test: start the server with `DATABASE_URL` set (Postgres), open the harness and press "Restart test". It sets up a game (with a locked-out player) and a lobby, then asks you to stop and start the server. Every fake player reconnects, lists `my_games` and resumes; the log says whether the game and the lobby come back paused and then resumed.
 
 `?dev=<name>` signs in as `dev:<name>`, which only a dev-mode server accepts. On start.ng the client uses the player's real session.
 

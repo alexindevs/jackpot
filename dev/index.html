@@ -25,10 +25,15 @@
     <button id="connect">Connect all</button>
     <button id="scenario">Scenario: room, pairs, start, ready</button>
     <button id="disconnect" class="alt">Disconnect all</button>
+    <button id="restart" class="alt">Restart test</button>
     <label><input id="autoproc" type="checkbox"> auto-proclaim for partners (test helper)</label>
     <span id="top" class="mute"></span>
   </div>
   <p class="mute" style="margin:6px 0 0">Signs in as dev:p1, dev:p2, … (dev-mode servers only). One tab drives every seat.</p>
+  <section id="rt" style="margin-top:10px">
+    <div class="prompt"><b>Restart test.</b> Start the server with <code>DATABASE_URL</code> set (Postgres), otherwise nothing is saved and nothing can come back. Stop it and start it again when the test says so.</div>
+    <pre id="rt-log" style="margin:6px 0 0; font-size:12px; white-space:pre-wrap"></pre>
+  </section>
 </header>
 <div id="seats"></div>
 <script type="module" src="./harness.js"></script>

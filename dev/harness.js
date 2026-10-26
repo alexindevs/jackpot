@@ -213,5 +213,94 @@ $('scenario').onclick = () => scenario().catch((e) => ($('top').textContent = 's
 // refresh countdowns, but never wipe a seat the user is typing in
 setInterval(() => seats.forEach((s) => { if (!s.el.contains(document.activeElement) || document.activeElement.tagName === 'BUTTON') render(s); }), 1000);
 
+// Restart test: a game (p1 locked out of calling Jackpot) and a lobby are set up, then you stop and start the server (started
+// with DATABASE_URL). Every fake player reconnects, asks for my_games and resumes; the checks say whether each one lands in a
+// paused room and then a resumed one.
+async function restartTest() {
+  const out = $('rt-log'), lines = [];
+  $('rt').hidden = false;
+  const show = () => { out.textContent = lines.join('\n'); };
+  const note = (mark, text) => { lines.push(mark + ' ' + text); show(); return mark === '✓'; };
+  const check = (ok, text) => note(ok ? '✓' : '✗', text);
+  const waitFor = async (cond, ms, label) => {
+    const end = Date.now() + ms;
+    while (Date.now() < end) { if (cond()) return true; await sleep(100); }
+    note('✗', 'timed out: ' + label);
+    return false;
+  };
+  const room = (name) => seats.find((s) => s.name === name).state.room;
+  try {
+    $('count').value = 6;
+    await connectAll();
+    await sleep(1200);
+    const [p1, p2, p3, p4, p5, p6] = seats;
+    for (const s of seats) { s.resumed = 0; s.net.addEventListener('message', (e) => { if (e.detail.t === 'resumed') s.resumed++; }); }
+
+    // the game: p1+p2 against p3+p4
+    const game = (await p1.net.request('create_room')).d.room;
+    for (const s of [p2, p3, p4]) await s.net.request('join', { room: game });
+    for (const [a, b] of [[p1, p2], [p3, p4]]) { await a.net.request('invite_partner', { to: b.name }); await sleep(60); await b.net.request('accept_partner', { from: a.name }); }
+    await sleep(150);
+    await p1.net.request('start_now'); await sleep(250);
+    for (const s of [p1, p2, p3, p4]) await s.net.request('ready', { ready: true });
+    await waitFor(() => room('p1') && room('p1').game && room('p1').game.phase === 'playing', 10000, 'the game to start');
+    // p1 gets locked out: p2 must not hold the passing card, then p1 calls Jackpot falsely until the lockout starts
+    for (let i = 0; i < 6 && room('p1').game.holder === 'p2'; i++) {
+      const g = room('p2').game; await p2.net.request('pass', { card: g.hand.findIndex((c) => c > 0) }); await sleep(300);
+    }
+    for (let i = 0; i < 4 && !room('p1').timers.some((t) => t.kind === 'proclaim'); i++) { await p1.net.request('proclaim').catch(() => {}); await sleep(500); }
+    check(room('p1').timers.some((t) => t.kind === 'proclaim'), 'game ' + game + ' running, p1 locked out of calling Jackpot');
+
+    // the lobby: p5+p6
+    const lobby = (await p5.net.request('create_room')).d.room;
+    await p6.net.request('join', { room: lobby });
+    await p5.net.request('invite_partner', { to: p6.name }); await sleep(60); await p6.net.request('accept_partner', { from: p5.name });
+    await sleep(200);
+    check(!!room('p5') && room('p5').phase === 'lobby', 'lobby ' + lobby + ' open with p5 and p6 paired');
+
+    note('…', 'NOW stop the server and start it again (with DATABASE_URL). Waiting for the connections to drop.');
+    await waitFor(() => seats.every((s) => s.net.status !== 'open'), 600000, 'the server to stop');
+    for (const s of seats) { s.state.room = null; s.state.myGames = []; s.auto = false; } // what the page would forget
+    check(true, 'all 6 sockets dropped');
+    const t0 = Date.now();
+    note('…', 'waiting for the players to reconnect (they retry with backoff, up to 30s apart)');
+    if (!await waitFor(() => seats.every((s) => s.net.status === 'open' && s.state.me), 120000, 'every player to reconnect')) return;
+    check(true, 'all 6 reconnected after ' + Math.round((Date.now() - t0) / 1000) + 's');
+    check(seats.every((s) => !s.state.room), 'nobody is put back into a room on their own');
+
+    // my_games
+    for (const s of seats) await s.net.request('my_games').catch((e) => note('✗', s.name + ' my_games: ' + e.code));
+    const listed = (s, kind, id) => s.state.myGames.length === 1 && s.state.myGames[0].kind === kind && s.state.myGames[0].room === id;
+    check([p1, p2, p3, p4].every((s) => listed(s, 'game', game)), 'p1 to p4 each list the paused game');
+    check([p5, p6].every((s) => listed(s, 'lobby', lobby)), 'p5 and p6 each list the paused lobby');
+
+    // resume the game, three players first: it must stay paused until the fourth is back
+    for (const s of [p1, p2, p3]) await s.net.request('resume_game', { room: game }).catch((e) => note('✗', s.name + ' resume_game: ' + e.code));
+    await waitFor(() => [p1, p2, p3].every((s) => room(s.name)), 5000, 'p1 to p3 to be in the game');
+    check([p1, p2, p3].every((s) => room(s.name) && room(s.name).paused), 'p1 to p3 are in the game and it is paused');
+    await p4.net.request('resume_game', { room: game }).catch((e) => note('✗', 'p4 resume_game: ' + e.code));
+    await waitFor(() => [p1, p2, p3, p4].every((s) => s.resumed > 0), 8000, 'everyone to get "resumed"');
+    check([p1, p2, p3, p4].every((s) => room(s.name) && !room(s.name).paused && room(s.name).game.phase), 'the game resumed for all four');
+    await sleep(500);
+    const lock = room('p1').timers.find((t) => t.kind === 'proclaim');
+    check(!!lock && room('p1').game.proclaimRevoked.p1 === true, 'p1 is still locked out, ' + (lock ? Math.round((lock.endsAt - Date.now()) / 1000) + 's left' : 'no timer'));
+
+    // resume the lobby
+    await p5.net.request('resume_game', { room: lobby }).catch((e) => note('✗', 'p5 resume_game: ' + e.code));
+    await waitFor(() => room('p5'), 5000, 'p5 to be in the lobby');
+    check(!!room('p5') && !!room('p5').paused, 'p5 is in the lobby and it is paused');
+    await p6.net.request('resume_game', { room: lobby }).catch((e) => note('✗', 'p6 resume_game: ' + e.code));
+    await waitFor(() => p5.resumed > 0 && p6.resumed > 0, 8000, 'the lobby to resume');
+    check([p5, p6].every((s) => room(s.name) && !room(s.name).paused && room(s.name).phase === 'lobby'), 'the lobby resumed for both');
+    check(room('p5').players.p5.partner === 'p6' && room('p5').players.p6.partner === 'p5', 'p5 and p6 are still partners');
+
+    const bad = lines.filter((l) => l.startsWith('✗')).length;
+    note(bad ? '✗' : '✓', bad ? bad + ' check(s) failed' : 'ALL CHECKS PASSED');
+  } catch (e) {
+    note('✗', 'the test stopped: ' + (e.message || e));
+  }
+}
+$('restart').onclick = restartTest;
+
 // handy for console and headless tests
-window.harness = { setAuto: (v) => seats.forEach((s) => { s.auto = v; if (v) autoStep(s); }), setAutoProclaim: (v) => { autoProclaim = v; }, seats, connectAll, scenario, disconnectAll, act };
+window.harness = { setAuto: (v) => seats.forEach((s) => { s.auto = v; if (v) autoStep(s); }), setAutoProclaim: (v) => { autoProclaim = v; }, seats, connectAll, scenario, disconnectAll, act, restartTest };

@@ -54,7 +54,7 @@ export class Net extends EventTarget {
       let msg;
       try { msg = JSON.parse(e.data); } catch { return; }
       if (msg.t === 'hello') this.helloAt = Date.now();
-      if (msg.id !== undefined && ['ok', 'error', 'rooms', 'room_created', 'pong'].includes(msg.t)) {
+      if (msg.id !== undefined && ['ok', 'error', 'rooms', 'room_created', 'my_games', 'pong'].includes(msg.t)) {
         const p = this.pending.get(msg.id);
         if (p) {
           this.pending.delete(msg.id);
