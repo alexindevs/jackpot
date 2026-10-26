@@ -1,6 +1,6 @@
 // The real client. Boots the session, opens the socket, and draws whichever screen the state calls for.
 import { Net } from './net.js';
-import { initial, reduce, applyMissed, nameOf } from './store.js';
+import { initial, reduce, applyMissed, expireLockouts, nameOf } from './store.js';
 import { serverUrl, devName } from './config.js';
 import { readSession, clearSession, signInUrl, connectPage, sessionExpiresAt, refreshSession } from './startng.js';
 import { clock, esc } from './ui/dom.js';
@@ -421,6 +421,7 @@ document.addEventListener('keydown', (e) => {
 
 setInterval(() => {
   root.querySelectorAll('[data-countdown]').forEach((el) => { el.textContent = clock(+el.dataset.countdown - Date.now()); });
+  if (expireLockouts(state)) render();
 }, 500);
 
 function boot() {

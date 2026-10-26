@@ -86,6 +86,16 @@ function addPublic(r, m) {
 
 // Messages we missed while offline (the reply to `resume`). Those at or below the snapshot's seq are already
 // reflected in the snapshot, so they only feed the chat panes and the log; later ones are applied normally.
+// A lockout ends at its endsAt even if proclaim_restored never reaches us (a dropped connection). endsAt is already in
+// local time (corrected by the server clock offset). Returns true when something changed.
+export function expireLockouts(s, now = Date.now()) {
+  const r = s.room;
+  if (!r || !r.game) return false;
+  const over = r.timers.filter((t) => t.kind === 'proclaim' && t.endsAt <= now);
+  for (const t of over) { delete r.game.proclaimRevoked[t.player]; dropTimers(r, 'proclaim', t.player); }
+  return over.length > 0;
+}
+
 export function applyMissed(prev, d) {
   if (!prev.room) return prev;
   const seq = prev.room.seq || 0;
