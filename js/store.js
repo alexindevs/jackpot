@@ -64,6 +64,7 @@ function fromSnapshot(s, d) {
       ...newGame(), round: g.round, phase: g.phase, holder: g.holder, seats: g.seats,
       wins: g.wins, points: g.points, hand: g.yourHand || [0, 0, 0, 0], hands: g.hands || {},
       pendingReveals: g.pendingReveals, forcedPass: g.forcedPass || '', winsToFinish: d.short ? 4 : 7, // the snapshot has no winsToFinish
+      result: g.result || null, // set once the game is over
       proclaimRevoked: Object.fromEntries(r.timers.filter((t) => t.kind === 'proclaim').map((t) => [t.player, true])),
     };
   }
