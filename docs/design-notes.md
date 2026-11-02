@@ -20,7 +20,7 @@ From the first friends-and-family playtest. The full list, with wording, owners 
 - **B5 No play-again or "who's here".** Open. There is no rematch, and a finished room only shows the result. Backend is involved if a rematch should keep the same room and teams.
 - **B3 A link problem.** Check. The screenshot is not in the repo and the cause is unknown. One related gap is fixed: an invite link to a paused game now says the game is paused instead of failing silently.
 - **B4 No alert when a game starts.** Done. A "Game starting" banner, a sound, and the tab title changes while the tab is hidden.
-- **B6 A rejected jackpot call gives no reason.** Done. The caller sees one line: the partner no longer holds four of a kind, plus the points left, or the lockout. The two error toasts say why too.
+- **B6 A rejected jackpot call gives no reason.** Done. The caller sees one line: the partner does not hold four of a kind, plus the points left, or the lockout. The two error toasts say why too.
 - **U1 Sound.** Done. Synthesised cues with a mute button and a volume slider. Still open: a sound when a new team joins.
 - **U2 Menus are hard to reach and close.** Check. Chat, team, signals, log and menu now open from one bottom button, but it has not been checked with the players.
 - **U3 Signals take too long to find in a menu.** Idea. A sidebar, or a few signals on standby chosen before the game, including one agreed with the partner. Backend is involved if standby signals are stored per team.

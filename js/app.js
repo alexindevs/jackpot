@@ -175,8 +175,7 @@ function announce(m, before) {
   else if (m.kind === 'suspicion_freed') popup(`<b>${esc(n(d.target))}</b> ${d.target === state.me ? 'were' : 'was'} cleared`);
   else if (m.kind === 'suspicion_failed') popup(`<b>${esc(n(d.target))}</b> ${d.target === state.me ? 'were' : 'was'} caught!`, 'bad');
   else if (m.kind === 'false_proclaim') {
-    // "no longer": a suspicion can reset the partner just before the call lands, so the caller did see four a moment ago
-    if (d.by === state.me) popup(`Your partner no longer holds four of a kind. ${d.revoked ? "You can't call Jackpot for 3 minutes." : `${d.pointsLeft} point${d.pointsLeft === 1 ? '' : 's'} left.`}`, 'bad');
+    if (d.by === state.me) popup(`Your partner does not hold four of a kind. ${d.revoked ? "You can't call Jackpot for 3 minutes." : `${d.pointsLeft} point${d.pointsLeft === 1 ? '' : 's'} left.`}`, 'bad');
     else popup(`<b>${esc(n(d.by))}</b> called Jackpot falsely`, 'bad');
   }
   else if (m.kind === 'team_removed') popup('A team left the game', 'warn');
