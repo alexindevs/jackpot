@@ -9,6 +9,7 @@ import { table, screenKind, isPlayer, teamNames, myTeam } from './ui/table.js';
 import { openGuide } from './ui/guide.js';
 import { openNewRoom } from './ui/newroom.js';
 import { renderDock, renderSheet, popup, banner } from './ui/sheets.js';
+import { openShare, roundText, gameText, scoreOf, shareButton } from './ui/share.js';
 import { cueFor, play } from './sound.js';
 import { mountSoundBar } from './ui/soundbar.js';
 
@@ -177,7 +178,9 @@ function announce(m, before) {
   else if (m.kind === 'round_won') {
     const mine = myTeam(state) === d.team;
     banner(`<div class="big">${isPlayer(state) ? (mine ? 'Your team won the round!' : 'The other team won the round') : esc(teamNames(state, d.team)) + ' won the round'}</div>
-      <div>${esc(teamNames(state, d.team))} <span class="letter">${esc(d.letter || '')}</span></div>`);
+      <div>${esc(teamNames(state, d.team))} <span class="letter">${esc(d.letter || '')}</span></div>
+      ${shareButton('round')}`, 7000);
+    ui.lastRoundTeam = d.team;
   } else if (m.kind === 'game_over') ui.over = { at: Date.now(), stay: false };
 }
 
@@ -309,8 +312,9 @@ function renderOverlay() {
     el.innerHTML = phase === 'result'
       ? `<div class="icon">${res.draw ? '🤝' : won ? '🎉' : '🏁'}</div>
          <div class="big">${res.draw ? 'It is a draw' : won ? 'Well done, you won!' : isPlayer(state) ? 'Game over. You lost this one' : 'Game over'}</div>
-         ${res.draw ? '' : `<div>${esc(winners)} win${how}</div>`}`
-      : `<div class="big">Going back to the lobby in <span id="over-count">3</span>…</div><button class="alt" data-act="over-stay">Stay here</button>`;
+         ${res.draw ? '' : `<div>${esc(winners)} win${how}</div>`}
+         ${shareButton('game')}`
+      : `<div class="big">Going back to the lobby in <span id="over-count">3</span>…</div><div class="row center">${shareButton('game')}<button class="alt" data-act="over-stay">Stay here</button></div>`;
   }
   if (phase === 'count') {
     const left = Math.max(0, 3 - Math.floor((t - 4000) / 1000));
@@ -396,6 +400,15 @@ function runAction(d) {
       act('suspect', { target: d.target }).finally(() => { ui.suspecting = null; render(); });
       break;
     }
+    case 'share': { // opens X only now, when the player asked
+      const g = state.room && state.room.game;
+      if (!g) break;
+      const res = g.result;
+      openShare(d.kind === 'round'
+        ? roundText(teamNames(state, ui.lastRoundTeam), scoreOf(g.wins))
+        : gameText(res && !res.draw && res.winner !== undefined ? teamNames(state, res.winner) : '', scoreOf({ ...(res && res.wins), ...g.wins }), res)); // every team, so a 4-0 game does not read '4'
+      break;
+    }
     case 'proclaim': act('proclaim'); break;
     case 'vote-end': act('vote_end', { agree: d.agree === 'true' }); break;
     case 'ready': act('ready', { ready: d.ready === 'true' }); break;
@@ -412,7 +425,7 @@ function runAction(d) {
     case 'decline': act('decline_partner', { from: d.from }).then(() => { state.invites.partner = state.invites.partner.filter((i) => i.from !== d.from); render(); }); break;
   }
 }
-for (const id of ['app', 'dock', 'sheet', 'overlay']) document.getElementById(id).addEventListener('click', onAction);
+for (const id of ['app', 'dock', 'sheet', 'overlay', 'banner']) document.getElementById(id).addEventListener('click', onAction);
 
 // Enter sends a chat line
 document.addEventListener('keydown', (e) => {

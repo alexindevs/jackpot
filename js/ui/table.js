@@ -4,6 +4,7 @@ import { esc, clock } from './dom.js';
 import { avatar } from './avatar.js';
 import { nameOf } from '../store.js';
 import { CARDS, LETTERS } from '../config.js';
+import { shareButton } from './share.js';
 
 const total = (h) => h.reduce((a, b) => a + b, 0);
 const countdown = (t) => (t ? `<b data-countdown="${t.endsAt}">${clock(t.endsAt - Date.now())}</b>` : '');
@@ -197,7 +198,7 @@ function over(s, ui) {
       ${res.draw ? '' : `<p><b>${esc(winners)}</b> win${how}.</p>`}
       ${scoreboard(s)}
       ${res.countsForStats === false ? '<p class="mute sm">This game does not count for the leaderboards.</p>' : ''}
-      <button data-act="leave">Back to rooms</button>
+      <div class="row center">${shareButton('game')}<button data-act="leave">Back to rooms</button></div>
     </div>
   </div>`;
 }
