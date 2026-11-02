@@ -1,0 +1,45 @@
+{
+  "description": "A Nigerian team game of hidden signals and bluffing, played in pairs. Collect four of a kind, signal your partner to call Jackpot, and use your suspicion points to catch the other teams out.",
+  "story": "Some of the best games we grew up with in Nigeria have never been digitized. Jackpot is the first digital version of one of them. You win by fooling your opponents: pass covert cues to your partner, send fake signals to bait others into wasting their suspicion, and read faces and behaviour for tells.",
+  "categories": ["board-and-card", "with-friends", "nigerian-themed", "brainy-games"],
+  "other_category": "Bluffing and hidden signals",
+  "controls": [
+    "Tap Pass next to a card to hand it on when you hold the passing card.",
+    "Tap Suspect under a player to suspect them. It costs one of your three points.",
+    "When you're suspected, tap the card types you'll show, then tap Show.",
+    "Tap the Jackpot button when your partner holds four of a kind. You can never call it for yourself.",
+    "Tap the + button for Chat, Team, Signal, Log and Menu.",
+    "In Signal, search the list and tap a gesture to send it.",
+    "Tap Ready in the team chat to start the round early.",
+    "In Menu, you can read how to play, vote to end the game or leave."
+  ],
+  "howToPlay": [
+    "Play in teams of two. A game takes 2 to 5 teams, so 4 to 10 players.",
+    "The room's creator picks the length. Long is 7 round wins. Short is 4.",
+    "Everyone starts with one card of each of four types. One player gets a fifth card, the passing card.",
+    "Whoever holds the passing card passes one card to the next player within 60 seconds. If they don't, the server does it for them.",
+    "Collect four of a kind, then let your partner know. Your partner calls Jackpot for you. A call is refused while your partner holds the passing card.",
+    "Tell your partner with signals. Pick a gesture from the list of about 200. Some reach only your partner, most are seen by the whole table, and you're never told which. Fake signals are fair game.",
+    "Before each round your team gets a private 2 minute chat. Agree a code, and change it every round.",
+    "You get 3 suspicion points a round. Suspect anyone, and they must show cards of 2 different types (3 if they hold five). If they can't, they lose their hand and start again. A suspicion costs a point, right or wrong.",
+    "A false Jackpot call costs a suspicion point. With none left, you can't call for 3 minutes.",
+    "The first team to 7 round wins takes the game. That spells J-A-C-K-P-O-T. A short game stops at 4, J-A-C-K.",
+    "If most teams vote to end early, with both partners agreeing, the team ahead wins.",
+    "Anyone can watch a game, and join the waiting line to play between rounds."
+  ],
+  "features": [
+    "Teams of two, 2 to 5 teams at the table",
+    "About 200 signals, and some of them are bluffs",
+    "A private team chat before every round",
+    "Public chat at the table",
+    "Long or short games",
+    "Watch any game, or join the line to play",
+    "Your own start.ng character"
+  ],
+  "walkthrough": [
+    "Change your code with your partner every round. Opponents learn fast.",
+    "Send a fake signal now and then. A bluff can make someone waste a suspicion.",
+    "Keep a suspicion point back for the end of the round, when hands are close to four of a kind.",
+    "Don't call Jackpot on a hunch. A false call costs a point."
+  ]
+}
