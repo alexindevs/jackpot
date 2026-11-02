@@ -2,7 +2,7 @@
 // Everything here lives outside #app, so a redraw of the game never resets a panel's scroll position or a half-typed message.
 import { esc } from './dom.js';
 import { publicChatLines, teamChatLines, eventLines, signalLines, isPlayer } from './table.js';
-import { gestureListHtml } from './signals.js';
+import { gestureListHtml, ideasHtml } from './signals.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -12,6 +12,7 @@ const KINDS = {
   signals: { icon: '📣', label: 'Signal', title: 'Send a signal' },
   log: { icon: '📜', label: 'Log', title: 'What happened' },
   menu: { icon: '⋯', label: 'Menu', title: 'Menu' },
+  ideas: { icon: '💡', label: 'Ideas', title: 'Signal ideas' }, // opened from the team chat, not from the bottom button
 };
 
 // which icons make sense right now
@@ -112,7 +113,8 @@ export function renderSheet(s, ui) {
     const tab = ui.logTab || 'events';
     sh.querySelectorAll('[data-act=log-tab]').forEach((b) => b.classList.toggle('alt', b.dataset.tab !== tab));
     fill(list, tab === 'signals' ? signalLines(s) : eventLines(s), true);
-  } else list.innerHTML = menuHtml(s);
+  } else if (kind === 'ideas') { if (builtFor === 'fresh') list.innerHTML = ideasHtml(s.gestures); }
+  else list.innerHTML = menuHtml(s);
   if (builtFor === 'fresh') builtFor = kind;
 }
 

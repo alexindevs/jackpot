@@ -284,6 +284,7 @@ function render() {
   const key = game ? screenKind(state) : (state.room ? 'lobby' : 'other');
   if (key !== lastScreen) { lastScreen = key; window.scrollTo(0, 0); }
   if (!game) { ui.sheet = null; ui.dockOpen = false; }
+  if (ui.sheet === 'ideas' && screenKind(state) !== 'chat') ui.sheet = null; // the ideas only belong to the chat between rounds
   renderDock(state, ui, game);
   renderSheet(state, ui);
   renderOverlay();
@@ -388,6 +389,7 @@ function runAction(d) {
       break;
     }
     case 'dock': ui.dockOpen = !ui.dockOpen; render(); break;
+    case 'ideas': ui.sheet = ui.sheet === 'ideas' ? null : 'ideas'; ui.dockOpen = false; render(); break;
     case 'sheet': ui.sheet = d.kind; ui.dockOpen = false; ui.sigQuery = ''; if (d.kind in ui.unread) ui.unread[d.kind] = 0; render(); break;
     case 'sheet-close': ui.sheet = null; render(); break;
     case 'log-tab': ui.logTab = d.tab; render(); break;

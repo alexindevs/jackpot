@@ -180,7 +180,7 @@ function chatPhase(s, ui) {
       <div class="chat private" id="team-list" data-stick>${teamChatLines(s)}</div>
       <div class="row nowrap"><input id="chat-input" placeholder="message your partner" maxlength="500" autocomplete="off"><button data-act="chat">Send</button></div>
       <div class="row between"><span class="mute sm">${ready}/${here} ready. Everyone ready skips the wait.</span>
-        <button data-act="ready" data-ready="${mine.ready ? 'false' : 'true'}">${mine.ready ? 'Not ready' : 'Ready'}</button></div>
+        <span class="row nowrap"><button class="alt" data-act="ideas">Signal ideas</button><button data-act="ready" data-ready="${mine.ready ? 'false' : 'true'}">${mine.ready ? 'Not ready' : 'Ready'}</button></span></div>
     </div>` : `<div class="teampane"><p class="mute center">The teams are agreeing their signals.</p>${watcherBar(s)}</div>`}
   </div>`;
 }
