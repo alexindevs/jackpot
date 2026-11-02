@@ -75,7 +75,8 @@ export function scoreboard(s) {
   if (roster) for (const [t, ids] of Object.entries(roster)) teams[t] = ids; // the whole game, as it ended
   else for (const id of r.order) { const p = r.players[id]; if (p.partner) (teams[p.team] = teams[p.team] || []).push(id); }
   // a removed player who came back on a new team leaves their old partner alone in the old row: drop it
-  return '<div class="score">' + Object.keys(teams).filter((t) => teams[t].length > 1).map((t) => {
+  const many = Object.keys(teams).length > 3;
+  return `<div class="score${many ? ' many' : ''}">` + Object.keys(teams).filter((t) => teams[t].length > 1).map((t) => {
     const out = teams[t].every((id) => !r.players[id] || r.players[id].removed);
     const mine = myTeam(s) === +t;
     const slot = teamSlot(s, +t);
@@ -108,12 +109,12 @@ function seatRing(s, canSuspect, suspecting) {
   const n = ring.length;
   const mi = Math.max(0, ring.indexOf(me));
   // on a phone the seats sit closer in, so the ones at the sides are not cut off by the screen edge
-  const [rx, ry, cy] = window.innerWidth <= 640 ? [32, 30, 56] : n > 6 ? [41, 33, 55] : [41, 40, 50];
+  const [rx, ry, cy] = window.innerWidth <= 640 ? [32, 30, 56] : n > 5 ? [42, 36, 52] : [41, 40, 50];
   const seesAll = Object.keys(g.hands).length > 0 && !r.players[me];
   const hold = timerOf(r, 'hold');
   const holder = g.holder ? (g.holder === me ? 'You hold' : `${esc(nameOf(s, g.holder))} holds`) : '';
   const centre = g.holder ? `<div class="centre"><div class="mute">${holder} the passing card</div>${hold ? `<div class="display timer">${countdown(hold)}</div>` : ''}</div>` : '';
-  return `<div class="ring${n > 6 ? ' dense' : ''}"><div class="oval"></div>${centre}` + ring.map((id, i) => {
+  return `<div class="ring${n > 5 ? ' dense' : ''}${n > 7 ? ' ten' : ''}"><div class="oval"></div>${centre}` + ring.map((id, i) => {
     if (id === me && r.players[me]) return '';
     const p = r.players[id] || {};
     const a = (Math.PI / 2) + ((i - mi + n) % n) * 2 * Math.PI / n;
