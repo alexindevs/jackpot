@@ -230,13 +230,14 @@ function tryPendingJoin() {
   if (!room || net.status !== 'open' || !state.me || state.room) return;
   // Only a real answer from the server uses the link up. If the connection dropped meanwhile, keep it for the retry.
   net.request('join', { room }).then(clearPendingRoom, (e) => {
-    const definitive = ['room_full', 'not_joinable', 'no_such_room', 'already_in_room', 'not_player', 'room_closed'].includes(e.code);
+    const definitive = ['room_full', 'not_joinable', 'paused', 'no_such_room', 'already_in_room', 'not_player', 'room_closed'].includes(e.code);
     if (!definitive) return;
     clearPendingRoom();
     ui.inviteNotice = {
       room,
       text: e.code === 'not_joinable' ? 'That game is over. You can still watch it.'
         : e.code === 'room_full' ? 'That room is full.'
+        : e.code === 'paused' ? 'That game is paused. Open the link again when everyone is back.'
         : e.code === 'already_in_room' ? '' : 'That room no longer exists.',
       canWatch: e.code === 'not_joinable' || e.code === 'room_full',
     };
