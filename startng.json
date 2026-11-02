@@ -3,12 +3,13 @@
   "story": "Some of the best games we grew up with in Nigeria have never been digitized. Jackpot is the first digital version of one of them. You win by fooling your opponents: pass covert cues to your partner, send fake signals to bait others into wasting their suspicion, and read faces and behaviour for tells.",
   "categories": ["board-and-card", "with-friends", "nigerian-themed", "brainy-games"],
   "other_category": "Bluffing and hidden signals",
+  "mobile": true,
   "controls": [
-    "Tap Pass next to a card to hand it on when you hold the passing card.",
+    "Tap Pass under your cards to hand one on when you hold the passing card.",
     "Tap Suspect under a player to suspect them. It costs one of your three points.",
     "When you're suspected, tap the card types you'll show, then tap Show.",
     "Tap the Jackpot button when your partner holds four of a kind. You can never call it for yourself.",
-    "Tap the + button for Chat, Team, Signal, Log and Menu.",
+    "Tap the … button at the top right for Chat, Team, Signal, Log and Menu.",
     "In Signal, search the list and tap a gesture to send it.",
     "Tap Ready in the team chat to start the round early.",
     "In Menu, you can read how to play, vote to end the game or leave."
