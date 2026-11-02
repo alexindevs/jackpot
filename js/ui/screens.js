@@ -204,7 +204,7 @@ export function lobby(s, ui) {
   const timer = r.countdownEndsAt
     ? `<div class="label">Game starts in</div><div class="display big"><span data-countdown="${r.countdownEndsAt}">${clock(r.countdownEndsAt - Date.now())}</span></div>`
     : `<div class="label">${r.order.length < 4 ? 'The countdown starts at 4 players.' : 'Waiting for the countdown.'}</div>`;
-  const hostBtns = r.creator === me ? `<button class="wide" data-act="start" ${canStart ? '' : 'disabled'}>Start now</button><button class="wide cream" data-act="add-bots" ${r.paused ? 'disabled' : ''}>Add bots</button>${canStart ? '' : '<div class="mute sm center">Needs 2+ teams and everyone paired</div>'}` : '';
+  const hostBtns = r.creator === me ? `<button class="wide" data-act="start" ${canStart ? '' : 'disabled'}>Start now</button>${canStart ? '' : '<div class="mute sm center">Needs 2+ teams and everyone paired</div>'}<button class="wide cream" data-act="add-bots" ${r.paused ? 'disabled' : ''}>Add bots</button>` : '';
 
   return `<main class="page has-bar"><div class="col wide-col">
     <div class="head">${roundBtn('door', 'Leave room', 'data-act="leave"')}<h2 class="display">Room ${esc(r.id)}</h2>${tag(r.short ? 'short' : 'long')}<span class="grow"></span>
