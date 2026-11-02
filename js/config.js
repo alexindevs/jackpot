@@ -1,4 +1,4 @@
-// Where the game server lives. Override per page load with ?server=wss://host/ws
+// Where the game server lives. On a local page, override per load with ?server=wss://host/ws
 export const DEFAULT_SERVER = 'wss://jackpot-backend-wkt0.onrender.com/ws';
 
 export const HIDDEN = 255;
@@ -20,14 +20,27 @@ export function normalizeServerUrl(raw) {
   } catch { return raw; }
 }
 
-export function serverUrl() {
-  const s = new URLSearchParams(location.search).get('server');
+// ?server= and ?dev= change where the session goes and who we sign in as, so only a page served from this machine may
+// use them. On a public host a crafted link could otherwise send the player's session to someone else's server.
+export function isLocalHost(hostname) {
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]' || hostname.endsWith('.localhost');
+}
+
+// The ?server= override, or null when it is absent, not ws(s)://, or the page is not local.
+export function serverOverride(loc = location) {
+  if (!isLocalHost(loc.hostname)) return null;
+  const s = new URLSearchParams(loc.search).get('server');
+  return s && /^wss?:\/\//i.test(s) ? s : null;
+}
+
+export function serverUrl(loc = location) {
+  const s = serverOverride(loc);
   if (s) return normalizeServerUrl(s);
-  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return 'ws://127.0.0.1:8080/ws';
+  if (isLocalHost(loc.hostname)) return 'ws://127.0.0.1:8080/ws';
   return normalizeServerUrl(DEFAULT_SERVER);
 }
 
 // ?dev=alice signs in as "dev:alice" (the backend only accepts this in dev mode)
-export function devName() {
-  return new URLSearchParams(location.search).get('dev');
+export function devName(loc = location) {
+  return isLocalHost(loc.hostname) ? new URLSearchParams(loc.search).get('dev') : null;
 }

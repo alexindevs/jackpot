@@ -1,7 +1,7 @@
 // The real client. Boots the session, opens the socket, and draws whichever screen the state calls for.
 import { Net } from './net.js';
 import { initial, reduce, applyMissed, expireLockouts, nameOf } from './store.js';
-import { serverUrl, devName } from './config.js';
+import { serverUrl, serverOverride, devName } from './config.js';
 import { readSession, clearSession, signInUrl, connectPage, sessionExpiresAt, refreshSession } from './startng.js';
 import { clock, esc } from './ui/dom.js';
 import * as screens from './ui/screens.js';
@@ -62,7 +62,7 @@ function clearPendingRoom() {
 
 function inviteLink(roomId) {
   const q = new URLSearchParams();
-  const server = new URLSearchParams(location.search).get('server');
+  const server = serverOverride();
   if (server) q.set('server', server); // only set when testing against another server
   q.set('room', roomId);
   return location.origin + location.pathname + '?' + q;
