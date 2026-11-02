@@ -8,6 +8,7 @@ A card game for 2 to 5 teams of two. This is the browser client: plain HTML, CSS
 - `dev/index.html`: multi-seat harness. One tab drives 2 to 10 dev players against one server. Local only: not tracked, so it is not published.
 - `sound/index.html`: sound test page, one button per cue (`js/sound.js` synthesises them; no audio files). Local only: not tracked, so it is not published.
 - `probe/index.html`: start.ng connectivity check (identity, session, WebSocket, page policy). Local only, like `dev/`.
+- `startng.json`: what start.ng shows on the game's own page (description, categories, controls, how to play). Field names and limits are in https://start.ng/docs.md.
 - `js/config.js`: the server address. Override per page load with `?server=wss://host/ws`, on a local page only (`?dev=` too).
 
 ## Run it locally
