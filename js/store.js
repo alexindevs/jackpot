@@ -22,7 +22,7 @@ export const nameOf = (s, id) => (s.profiles[id] && s.profiles[id].name) || id;
 
 function newRoom(id) {
   return {
-    id, creator: null, short: false, phase: 'lobby', players: {}, order: [], spectators: 0,
+    id, creator: null, short: false, waiting: [], phase: 'lobby', players: {}, order: [], spectators: 0,
     timers: [], countdownEndsAt: null, chat: [], pub: [], lastPubId: 0, seq: 0, signals: [], epoch: 0, paused: null, log: [], game: null,
   };
 }
@@ -46,6 +46,7 @@ function fromSnapshot(s, d) {
   const r = newRoom(d.room);
   r.creator = d.creator;
   r.short = !!d.short;
+  r.waiting = d.waiting || [];
   r.phase = d.phase;
   r.spectators = d.spectators;
   for (const p of d.players) { r.players[p.id] = p; r.order.push(p.id); }
@@ -232,6 +233,7 @@ function reduceRoom(s, t, d, num) {
     case 'resumed': r.paused = null; r.timers = []; say(s, 'game resumed'); break;
     case 'chat_message': addPublic(r, d); break;
     case 'signal': addSignal(r, s, d, num, false); break;
+    case 'waiting_changed': r.waiting = d.players || []; break;
     case 'ready_changed': if (r.players[d.player]) r.players[d.player].ready = d.ready; break;
     case 'team_chat_message':
       if (d.id !== undefined && r.chat.some((m) => m.id === d.id)) break; // already in the pane (snapshot or replay)
@@ -322,6 +324,19 @@ function reduceEvent(s, kind, d) {
       g.pendingReveals = []; g.reveal = null; g.forcedPass = '';
       say(s, 'team ' + d.team + ' wins the round (' + (d.letter || LETTERS[d.wins - 1]) + '), proclaimed by ' + n(d.proclaimer));
       break;
+    case 'team_added': {
+      const [a, b] = d.members;
+      for (const [id, partner] of [[a, b], [b, a]]) {
+        r.players[id] = { id, connected: true, partner, ready: false, removed: false, team: d.team };
+        if (!r.order.includes(id)) r.order.push(id);
+        g.points[id] = g.suspicionPoints;
+      }
+      g.wins[d.team] = 0;
+      r.waiting = r.waiting.filter((id) => !d.members.includes(id));
+      r.spectators = Math.max(0, r.spectators - d.members.length);
+      say(s, n(a) + ' and ' + n(b) + ' joined as a new team');
+      break;
+    }
     case 'team_removed':
       for (const id of d.members) if (r.players[id]) r.players[id].removed = true;
       say(s, 'team ' + d.team + ' removed');

@@ -70,12 +70,26 @@ function scoreboard(s) {
   const r = s.room, g = r.game;
   const teams = {};
   for (const id of r.order) { const p = r.players[id]; if (p.partner) (teams[p.team] = teams[p.team] || []).push(id); }
-  return '<div class="score">' + Object.keys(teams).map((t) => {
+  // a removed player who came back on a new team leaves their old partner alone in the old row: drop it
+  return '<div class="score">' + Object.keys(teams).filter((t) => teams[t].length > 1).map((t) => {
     const w = g.wins[t] || 0;
     const letters = [...LETTERS.slice(0, g.winsToFinish)].map((l, i) => `<i class="${i < w ? 'on' : ''}">${l}</i>`).join('');
     const out = teams[t].every((id) => r.players[id].removed);
     return `<div class="score-team t${t % 5}${out ? ' out' : ''}"><span class="nm">${teams[t].map((id) => esc(nameOf(s, id))).join(' & ')}</span><span class="letters">${letters}</span></div>`;
   }).join('') + '</div>';
+}
+
+const teamCount = (r) => new Set(Object.values(r.players).filter((p) => p.partner && !p.removed).map((p) => p.team)).size;
+
+// What someone watching a running game sees: a way to ask to play, or who they are waiting with.
+function watcherBar(s) {
+  const r = s.room, g = r.game, waiting = r.waiting || [];
+  let h = '';
+  if (waiting.includes(s.me)) {
+    const others = waiting.filter((id) => id !== s.me).map((id) => esc(nameOf(s, id)));
+    h = `<span class="mute sm">${others.length ? 'Waiting with ' + others.join(', ') : 'Waiting for a partner'}</span>`;
+  } else if (!r.paused && g.phase !== 'over' && teamCount(r) < 5) h = `<button data-act="join" data-room="${esc(r.id)}">Join the game</button>`;
+  return `<div class="row center"><span class="mute sm">You are watching</span>${h}</div>`;
 }
 
 function topbar(s, ui, title) {
@@ -142,7 +156,7 @@ function play(s, ui) {
     ${scoreboard(s)}
     <div class="mid">${seatRing(s, canAct, ui.suspecting)}</div>
     <div class="controls">
-      ${spectator ? '<div class="mute center sm">You are watching</div>' : `
+      ${spectator ? watcherBar(s) : `
         ${forced ? `<div class="prompt"><b>You were caught.</b> Pass a card first ${countdown(timerOf(r, 'forced', me))}</div>` : ''}
         ${revealPrompt(g, ui, r)}
         <div class="hand">${handHtml(g.hand)}</div>
@@ -166,7 +180,7 @@ function chatPhase(s, ui) {
       <div class="row nowrap"><input id="chat-input" placeholder="message your partner" maxlength="500" autocomplete="off"><button data-act="chat">Send</button></div>
       <div class="row between"><span class="mute sm">${ready}/${here} ready. Everyone ready skips the wait.</span>
         <button data-act="ready" data-ready="${mine.ready ? 'false' : 'true'}">${mine.ready ? 'Not ready' : 'Ready'}</button></div>
-    </div>` : '<div class="teampane"><p class="mute center">The teams are agreeing their signals. You are watching.</p></div>'}
+    </div>` : `<div class="teampane"><p class="mute center">The teams are agreeing their signals.</p>${watcherBar(s)}</div>`}
   </div>`;
 }
 

@@ -48,7 +48,7 @@ function resumeList(s) {
 export function rooms(s, ui) {
   const list = s.rooms.length
     ? s.rooms.map((r) => `<div class="room">
-        <div><b>${esc(r.id)}</b> <span class="tag">${esc(r.phase)}</span><span class="tag">${r.short ? 'short' : 'long'}</span><div class="mute">${r.players} players, ${r.teams} teams, ${r.spectators} watching</div></div>
+        <div><b>${esc(r.id)}</b> <span class="tag">${esc(r.phase)}</span><span class="tag">${r.short ? 'short' : 'long'}</span><div class="mute">${r.players} players, ${r.teams} teams, ${r.spectators} watching${r.waiting ? ', ' + r.waiting + ' waiting' : ''}</div></div>
         <div class="row">
           ${r.joinable ? `<button data-act="join" data-room="${esc(r.id)}">Join</button>` : ''}
           <button class="alt" data-act="spectate" data-room="${esc(r.id)}">Watch</button>

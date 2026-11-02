@@ -119,9 +119,11 @@ function render(seat) {
   if (!r) {
     h += `<div class="row"><b>${esc(me)}</b> ${s.closed ? '<span class="warn">room closed: ' + esc(s.closed) + '</span>' : ''}
       <button data-a="create">Create room</button><button data-a="rooms" class="alt">List rooms</button></div>
-      <div class="mute">${s.rooms.map((x) => esc(x.id) + ' ' + x.phase + ' ' + x.players + 'p').join(' | ')}</div>`;
+      <div class="mute">${s.rooms.map((x) => esc(x.id) + ' ' + x.phase + ' ' + x.players + 'p' + (x.waiting ? ' ' + x.waiting + 'w' : '')).join(' | ')}</div>
+      <div class="row">${s.rooms.filter((x) => x.joinable).map((x) => `<button class="alt" data-a="join" data-r="${esc(x.id)}">join ${esc(x.id)}</button>`).join('')}</div>`;
     v.innerHTML = h;
     v.querySelector('[data-a=create]').onclick = () => act(seat, 'create_room');
+    v.querySelectorAll('[data-a=join]').forEach((b) => (b.onclick = () => act(seat, 'join', { room: b.dataset.r })));
     v.querySelector('[data-a=rooms]').onclick = () => seat.net.request('list_rooms').then((m) => { seat.state = reduce(seat.state, m); render(seat); }).catch((e) => addLog(seat, '! ' + e.message));
     return;
   }
@@ -132,6 +134,7 @@ function render(seat) {
     const p = r.players[id];
     return esc(nameOf(s, id)) + (p.partner ? '&' + esc(p.partner) : '') + (p.removed ? '(out)' : '') + (p.connected ? '' : '(offline)') + (p.ready ? '✓' : '');
   }).join(', ') + '</div>';
+  if (g && (!r.players[me] || r.players[me].removed)) h += `<div class="row"><button data-a="joinq">join the line</button><span class="mute">waiting: ${esc((r.waiting || []).join(', ') || 'nobody')}</span></div>`;
   const timers = r.timers.map((t) => t.kind + (t.player ? ':' + t.player : '') + ' ' + Math.max(0, Math.round((t.endsAt - Date.now()) / 1000)) + 's');
   if (timers.length) h += '<div class="warn">' + esc(timers.join(' | ')) + '</div>';
   if (s.invites.partner.length) h += '<div>' + s.invites.partner.filter((i) => i.to === me).map((i) => `<button data-a="acc" data-f="${esc(i.from)}">Accept ${esc(i.from)}</button>`).join('') + '</div>';
@@ -156,6 +159,7 @@ function render(seat) {
   v.innerHTML = h;
   const on = (sel, fn) => v.querySelectorAll(sel).forEach((b) => (b.onclick = () => fn(b)));
   on('[data-a=leave]', () => act(seat, 'leave'));
+  on('[data-a=joinq]', () => act(seat, 'join', { room: r.id }));
   on('[data-a=start]', () => act(seat, 'start_now'));
   on('[data-a=acc]', (b) => act(seat, 'accept_partner', { from: b.dataset.f }));
   on('[data-a=pass]', (b) => act(seat, 'pass', { card: +b.dataset.c }));

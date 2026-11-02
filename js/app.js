@@ -17,7 +17,7 @@ mountSoundBar(document.getElementById('sound'));
 const toastEl = document.getElementById('toast');
 
 const ERRORS = {
-  room_full: 'That room is full.', not_joinable: 'That room has already started.', no_such_room: 'No such room.',
+  room_full: 'That room is full.', not_joinable: "You can't join that game now.", no_such_room: 'No such room.',
   already_in_room: 'You are already in a room.', not_creator: 'Only the host can do that.',
   too_few_players: 'You need at least two teams.', unpaired_players: 'Everyone needs a partner first.',
   already_paired: 'Already on a team.', already_invited: 'You already invited them.', no_invite: 'That invite is gone.',
@@ -25,7 +25,7 @@ const ERRORS = {
   not_holder: 'You do not hold the passing card.', no_such_card: "You don't have that card.", no_points: 'No suspicion points left.',
   self_suspect: "You can't suspect yourself.", busy: 'Someone is already answering a suspicion.', bad_reveal: 'That is not a valid answer.',
   proclaim_revoked: "You can't call Jackpot yet.", partner_holds_passing_card: 'Your partner is holding the passing card.',
-  game_over: 'The game is over.', nothing_to_answer: 'Nothing to answer.', bad_text: 'That message cannot be sent.',
+  game_over: 'The game is over.', paused: 'The game is paused.', nothing_to_answer: 'Nothing to answer.', bad_text: 'That message cannot be sent.',
   slow_down: 'Slow down a little.', rate_limited: 'Slow down a little.', closed: 'Not connected.', timeout: 'The server did not answer.',
 };
 
@@ -173,6 +173,7 @@ function announce(m, before) {
     else popup(`<b>${esc(n(d.by))}</b> called Jackpot falsely`, 'bad');
   }
   else if (m.kind === 'team_removed') popup('A team left the game', 'warn');
+  else if (m.kind === 'team_added') popup(`<b>${d.members.map((id) => esc(n(id))).join(' & ')}</b> joined as a new team`);
   else if (m.kind === 'round_won') {
     const mine = myTeam(state) === d.team;
     banner(`<div class="big">${isPlayer(state) ? (mine ? 'Your team won the round!' : 'The other team won the round') : esc(teamNames(state, d.team)) + ' won the round'}</div>
@@ -234,7 +235,7 @@ function tryPendingJoin() {
     clearPendingRoom();
     ui.inviteNotice = {
       room,
-      text: e.code === 'not_joinable' ? 'That game has already started. You can watch it instead.'
+      text: e.code === 'not_joinable' ? 'That game is over. You can still watch it.'
         : e.code === 'room_full' ? 'That room is full.'
         : e.code === 'already_in_room' ? '' : 'That room no longer exists.',
       canWatch: e.code === 'not_joinable' || e.code === 'room_full',

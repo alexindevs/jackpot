@@ -17,6 +17,8 @@ pre.log { height:140px; overflow:auto; font-size:12px; color:var(--mute); backgr
 .stage .ring { position:absolute; inset:0; height:auto; margin:0; }
 .seat { position:absolute; transform:translate(-50%,-50%); text-align:center; width:84px; background:#12151b; border-radius:10px; padding:4px; border:2px solid transparent; }
 .seat.holder { border-color:var(--warn); }
+.seat .card { width:16px; height:22px; font-size:11px; margin:1px; border-radius:3px; } /* a watcher sees every hand: keep each to one row */
+.seat .card small { font-size:8px; }
 .seat.me { background:#1c2330; }
 .seat.out { opacity:.4; }
 .seat .nm { font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
