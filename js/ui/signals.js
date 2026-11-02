@@ -25,6 +25,6 @@ export function gestureListHtml(gestures, q) {
   }
   if (!gestures.length) return '<p class="mute">The signal list has not arrived yet. Close this and try again in a moment.</p>';
   if (!groups.size) return '<p class="mute">Nothing matches. Try another word.</p>';
-  return [...groups].map(([name, items]) => `<h3>${esc(name)}</h3><div class="gestures">${
-    items.map((g) => `<button class="alt" data-act="send-signal" data-gesture="${esc(g.id)}" title="${esc(g.seen)}">${esc(g.label)}</button>`).join('')}</div>`).join('');
+  return [...groups].map(([name, items]) => `<h4>${esc(name)}</h4><div class="gestures">${
+    items.map((g) => `<button class="gesture" data-act="send-signal" data-gesture="${esc(g.id)}" title="${esc(g.seen)}">${esc(g.label)}</button>`).join('')}</div>`).join('');
 }

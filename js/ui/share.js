@@ -22,4 +22,4 @@ export const shareUrl = (text) => `https://twitter.com/intent/tweet?text=${encod
 
 export const openShare = (text) => window.open(shareUrl(text), '_blank', 'noopener');
 
-export const shareButton = (kind) => `<button class="alt" data-act="share" data-kind="${kind}">Share</button>`;
+export const shareButton = (kind) => `<button class="cream" data-act="share" data-kind="${kind}">Share</button>`;

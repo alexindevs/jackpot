@@ -2,7 +2,7 @@
 import { LETTERS } from './config.js';
 
 export const initial = () => ({
-  me: null, offset: 0, gestures: [], myGames: [], profiles: {}, rooms: [], room: null, closed: null,
+  me: null, offset: 0, gestures: [], myGames: [], finished: [], profiles: {}, rooms: [], room: null, closed: null,
   invites: { partner: [], room: [] },
 });
 
@@ -157,6 +157,7 @@ export function reduce(prev, msg) {
       s.myGames = d.map((g) => ({ ...g, until: when(s, g.until) }));
       for (const g of d) for (const p of g.players) s.profiles[p.id] = { id: p.id, name: p.name, style: p.style || null };
       break;
+    case 'finished_games': s.finished = d; break; // the last games this player finished, newest first
     case 'room_closed':
       s.closed = d.reason;
       s.room = null;

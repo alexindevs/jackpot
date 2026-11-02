@@ -12,13 +12,16 @@ import { renderDock, renderSheet, popup, banner } from './ui/sheets.js';
 import { openShare, roundText, gameText, scoreOf, shareButton } from './ui/share.js';
 import { cueFor, play } from './sound.js';
 import { mountSoundBar } from './ui/soundbar.js';
+import { mountScenery } from './ui/scenery.js';
+import { icon } from './ui/icons.js';
 
 const root = document.getElementById('app');
+mountScenery();
 mountSoundBar(document.getElementById('sound'));
 // A player who stays away from a running game drops out with their team, so ask before leaving it for start.ng.
 document.getElementById('startng').addEventListener('click', (e) => {
   const g = state.room && state.room.game;
-  if (g && g.phase !== 'over' && isPlayer(state) && !confirm("Go back to start.ng? Your team drops out of the game if you don't come back soon.")) e.preventDefault();
+  if (g && g.phase !== 'over' && isPlayer(state)) { e.preventDefault(); ui.dialog = 'startng'; render(); }
 });
 const toastEl = document.getElementById('toast');
 
@@ -34,6 +37,8 @@ const ERRORS = {
   game_over: 'The game is over.', paused: 'The game is paused.',
   nothing_to_add: 'Everyone already has a partner, and there are two teams.', not_a_bot: "That player isn't a bot.", too_many_bots: 'A room can have at most 9 bots.', nothing_to_answer: 'Nothing to answer.', bad_text: 'That message cannot be sent.',
   slow_down: 'Slow down a little.', rate_limited: 'Slow down a little.', closed: 'Not connected.', timeout: 'The server did not answer.',
+  already_member: 'You are already in that room.', bad_gesture: "That signal isn't available.", bad_message: 'That could not be sent.', bad_reveal: 'That is not a valid answer.',
+  history_unavailable: 'Your past games are not available right now.', no_such_game: 'That game is no longer saved.', not_in_room: 'You are not in a room.', room_closed: 'That room has closed.', unknown_player: "That player ID doesn't exist.",
 };
 
 // An invite link looks like https://jackpot.start.ng/?room=abc123. Remember the room (it has to survive the
@@ -76,7 +81,7 @@ function inviteLink(roomId) {
 }
 
 let state = initial();
-const ui = { sheet: null, dockOpen: false, unread: { chat: 0, team: 0 }, logTab: 'events', sigQuery: '', over: null, inviteLink, guest: guestArrival, pendingRoom, inviteNotice: null, retryIn: 0, sel: [], suspecting: null, status: 'closed', identity: null, notice: null, blocked: false, signInUrl: signInUrl() };
+const ui = { page: 'home', dialog: null, sheet: null, dockOpen: false, unread: { chat: 0, team: 0 }, logTab: 'events', sigQuery: '', over: null, inviteLink, guest: guestArrival, pendingRoom, inviteNotice: null, retryIn: 0, sel: [], suspecting: null, status: 'closed', identity: null, notice: null, blocked: false, signInUrl: signInUrl() };
 const dev = devName();
 let session = dev ? null : readSession();
 const token = () => (dev ? 'dev:' + dev : session);
@@ -156,7 +161,7 @@ function announce(m, before) {
   if (!r) return;
   const cue = cueFor(m, { me: state.me, player: isPlayer(state), myTeam: myTeam(state), lobby: r.phase === 'lobby' });
   if (cue) play(cue);
-  if (m.t === 'game_starting') { banner('<div class="big">Game starting</div>'); alertTitle('▶ Game starting'); }
+  if (m.t === 'game_starting') { banner('<div class="display big">Game starting</div>'); alertTitle('▶ Game starting'); }
   const n = (id) => (id === state.me ? 'You' : nameOf(state, id));
   if (m.t === 'chat_message' && m.d.from !== state.me && ui.sheet !== 'chat') ui.unread.chat++;
   if (m.t === 'team_chat_message' && m.d.from !== state.me && ui.sheet !== 'team') ui.unread.team++;
@@ -182,8 +187,8 @@ function announce(m, before) {
   else if (m.kind === 'team_added') popup(`<b>${d.members.map((id) => esc(n(id))).join(' & ')}</b> joined as a new team`);
   else if (m.kind === 'round_won') {
     const mine = myTeam(state) === d.team;
-    banner(`<div class="big">${isPlayer(state) ? (mine ? 'Your team won the round!' : 'The other team won the round') : esc(teamNames(state, d.team)) + ' won the round'}</div>
-      <div>${esc(teamNames(state, d.team))} <span class="letter">${esc(d.letter || '')}</span></div>
+    banner(`<div class="banner-title">${isPlayer(state) ? (mine ? 'Your team won the round!' : 'The other team won the round') : esc(teamNames(state, d.team)) + ' won the round'}</div>
+      <div class="banner-row"><span>${esc(teamNames(state, d.team))}</span><span class="display letter">${esc(d.letter || '')}</span></div>
       ${shareButton('round')}`, 7000);
     ui.lastRoundTeam = d.team;
   } else if (m.kind === 'game_over') ui.over = { at: Date.now(), stay: false };
@@ -262,26 +267,33 @@ function pollRooms() {
 setInterval(pollRooms, 4000);
 
 function view() {
-  if (ui.blocked) return `<section class="panel center"><h2>Opened elsewhere</h2><p class="warn">${ui.notice}</p><button data-act="reload">Reload</button></section>`;
+  if (ui.blocked) return screens.openedElsewhere(ui);
   if (!token()) return screens.signIn(ui);
   if (!state.me) return screens.connecting(ui);
-  if (!state.room) return screens.rooms(state, ui);
+  if (!state.room) return ui.page === 'rooms' ? screens.rooms(state, ui) : ui.page === 'games' ? screens.games(state) : screens.home();
   if (state.room.phase === 'lobby') return screens.lobby(state, ui);
   return table(state, ui);
 }
 
-let lastScreen = '';
+let lastScreen = '', wasInRoom = false;
 const isGameScreen = () => !ui.blocked && !!token() && !!state.me && !!state.room && state.room.phase !== 'lobby';
 
 function render() {
   const game = isGameScreen();
+  // leaving a room (or having it closed) lands on the room list, where the notice about it is
+  if (wasInRoom && !state.room) ui.page = 'rooms';
+  wasInRoom = !!state.room;
+  if (ui.dialog === 'invite' && (!state.room || state.room.phase !== 'lobby')) ui.dialog = null;
+  if ((ui.dialog === 'leave' || ui.dialog === 'startng') && !state.room) ui.dialog = null;
   // keep what the player is typing across redraws
   const a = document.activeElement;
   const keep = a && a.id && root.contains(a) ? { id: a.id, value: a.value, start: a.selectionStart, end: a.selectionEnd } : null;
-  root.innerHTML = (game ? '' : screens.header(state, ui)) + view();
+  root.innerHTML = view() + (ui.dialog === 'leave' || ui.dialog === 'startng' ? screens.confirmDialog(ui.dialog) : '');
+  document.getElementById('who').innerHTML = token() && !ui.blocked ? screens.shell(state, ui) : '';
   document.body.classList.toggle('stage-on', game);
+  document.body.dataset.view = game ? 'game' : (!token() || !state.me || ui.blocked ? 'plain' : state.room ? 'lobby' : ui.page);
   // a different screen starts at the top (the old layout kept its scroll position into the next screen)
-  const key = game ? screenKind(state) : (state.room ? 'lobby' : 'other');
+  const key = game ? screenKind(state) : (state.room ? 'lobby' : 'other:' + ui.page);
   if (key !== lastScreen) { lastScreen = key; window.scrollTo(0, 0); }
   if (!game) { ui.sheet = null; ui.dockOpen = false; }
   if (ui.sheet === 'ideas' && screenKind(state) !== 'chat') ui.sheet = null; // the ideas only belong to the chat between rounds
@@ -316,11 +328,11 @@ function renderOverlay() {
   if (el.dataset.phase !== phase) { // rebuild only when the phase changes, so a tap on Stay is never swallowed
     el.dataset.phase = phase;
     el.innerHTML = phase === 'result'
-      ? `<div class="icon">${res.draw ? '🤝' : won ? '🎉' : '🏁'}</div>
-         <div class="big">${res.draw ? 'It is a draw' : won ? 'Well done, you won!' : isPlayer(state) ? 'Game over. You lost this one' : 'Game over'}</div>
-         ${res.draw ? '' : `<div>${esc(winners)} win${how}</div>`}
+      ? `<div class="result-icon">${res.draw ? icon.equal(96) : won ? icon.trophy(96) : icon.flag(96)}</div>
+         <div class="display big">${res.draw ? 'It is a draw' : won ? 'Well done, you won!' : isPlayer(state) ? 'You lost this one' : 'Game over'}</div>
+         ${res.draw ? '' : `<div class="big-text">${esc(winners)} win${how}</div>`}
          ${shareButton('game')}`
-      : `<div class="big">Going back to the lobby in <span id="over-count">3</span>…</div><div class="row center">${shareButton('game')}<button class="alt" data-act="over-stay">Stay here</button></div>`;
+      : `<div class="big-text">Going back to the lobby in</div><div class="display count" id="over-count">3</div><div class="row center">${shareButton('game')}<button class="alt" data-act="over-stay">Stay here</button></div>`;
   }
   if (phase === 'count') {
     const left = Math.max(0, 3 - Math.floor((t - 4000) / 1000));
@@ -332,7 +344,7 @@ function renderOverlay() {
 setInterval(renderOverlay, 250);
 
 function leaveRoom() {
-  ui.sheet = null; ui.dockOpen = false;
+  ui.sheet = null; ui.dockOpen = false; ui.dialog = null;
   return act('leave').then(() => { state.room = null; pollRooms(); render(); });
 }
 
@@ -357,6 +369,8 @@ document.addEventListener('pointerup', (e) => {
 
 function onAction(e) {
   const b = e.target.closest('[data-act]');
+  // a tap inside a dialog that is not on one of its buttons must not count as a tap on the backdrop behind it
+  if (b && b.classList.contains('modal-backdrop') && e.target !== b) return;
   if (b && !b.disabled) runAction(b.dataset);
 }
 
@@ -364,6 +378,12 @@ function runAction(d) {
 
   switch (d.act) {
     case 'reload': location.reload(); break;
+    case 'page':
+      ui.page = d.page; render(); if (d.page !== 'home') pollRooms();
+      if (d.page === 'games') net.request('finished_games').catch(() => { /* an older server has no history: the list just stays empty */ });
+      break;
+    case 'dialog': ui.dialog = d.kind; render(); break;
+    case 'dialog-close': ui.dialog = null; render(); break;
     case 'guide': openGuide(); break;
     case 'resume-game': act('resume_game', { room: d.room }); break;
     case 'watch-invited': { const room = ui.inviteNotice && ui.inviteNotice.room; ui.inviteNotice = null; if (room) act('spectate', { room }); render(); break; }
@@ -385,9 +405,10 @@ function runAction(d) {
     case 'leave': leaveRoom(); break;
     case 'leave-confirm': {
       const inGame = state.room && state.room.game && state.room.game.phase !== 'over' && isPlayer(state);
-      if (!inGame || confirm('Leave the game? Your whole team drops out straight away.')) leaveRoom();
+      if (inGame) { ui.dialog = 'leave'; render(); } else leaveRoom();
       break;
     }
+    case 'leave-yes': ui.dialog = null; leaveRoom(); break;
     case 'dock': ui.dockOpen = !ui.dockOpen; render(); break;
     case 'ideas': ui.sheet = ui.sheet === 'ideas' ? null : 'ideas'; ui.dockOpen = false; render(); break;
     case 'sheet': ui.sheet = d.kind; ui.dockOpen = false; ui.sigQuery = ''; if (d.kind in ui.unread) ui.unread[d.kind] = 0; render(); break;
@@ -434,7 +455,17 @@ function runAction(d) {
     case 'decline': act('decline_partner', { from: d.from }).then(() => { state.invites.partner = state.invites.partner.filter((i) => i.from !== d.from); render(); }); break;
   }
 }
-for (const id of ['app', 'dock', 'sheet', 'overlay', 'banner']) document.getElementById(id).addEventListener('click', onAction);
+for (const id of ['app', 'dock', 'sheet', 'overlay', 'banner', 'scrim']) document.getElementById(id).addEventListener('click', onAction);
+
+// the table lays its seats out differently on a phone, so draw again when the window changes size
+let resizeT = null;
+window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(render, 150); });
+
+// Escape closes the dialog or panel on top
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (ui.dialog) { ui.dialog = null; render(); } else if (ui.sheet) { ui.sheet = null; render(); } else if (ui.dockOpen) { ui.dockOpen = false; render(); }
+});
 
 // Enter sends a chat line
 document.addEventListener('keydown', (e) => {

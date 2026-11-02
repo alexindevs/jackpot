@@ -1,11 +1,47 @@
-:root { color-scheme: dark; --bg:#0f1115; --card:#181b22; --fg:#e8e8ea; --mute:#8b8f98; --ok:#4ade80; --bad:#f87171; --warn:#fbbf24; --acc:#3b82f6; }
+/* Tokens, reset and the controls every screen shares. Screens and components are in app.css. */
+:root {
+  color-scheme: dark;
+  --ink: #2b160d; --night: #1a0b05; --cream: #f4e6cc; --orange: #e8742a; --gold: #f2b84b;
+  --ok: #4ade80; --bad: #f87171; --warn: #f2b84b; --bot: #9fb4ff;
+  --glass: rgba(26, 11, 5, .78); --glass-line: rgba(244, 230, 204, .18); --row: rgba(244, 230, 204, .08);
+  --mute: rgba(244, 230, 204, .62);
+  /* a team keeps its colour for the whole game: names, avatars, letters */
+  --t0: #e8742a; --t1: #7fc29b; --t2: #e0707f; --t3: #6fa8dc; --t4: #b794e6;
+  --display: 'Henny Penny', 'Georgia', serif;
+  --text: 'Bricolage Grotesque', system-ui, sans-serif;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
 * { box-sizing: border-box; }
-body { margin:0; padding:16px; background:var(--bg); color:var(--fg); font:14px/1.45 system-ui, sans-serif; }
-button { padding:5px 10px; border-radius:6px; border:0; background:var(--acc); color:#fff; font:inherit; cursor:pointer; }
-button:disabled { opacity:.4; cursor:default; }
-button.alt { background:#2a2f3a; }
-input, textarea { padding:5px 8px; border-radius:6px; border:1px solid #333; background:#0b0d11; color:var(--fg); font:inherit; }
-.mute { color:var(--mute); } .ok { color:var(--ok); } .bad { color:var(--bad); } .warn { color:var(--warn); }
-.row { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
-.card { display:inline-flex; align-items:center; justify-content:center; width:34px; height:44px; border-radius:6px; background:#222733; font-size:20px; margin:2px; }
-.card.pass { outline:2px solid var(--warn); }
+html { background: var(--night); }
+body { margin: 0; min-height: 100dvh; color: var(--cream); font: 500 16px/1.4 var(--text); background: transparent; -webkit-tap-highlight-color: transparent; }
+h1, h2, h3, p { margin: 0; }
+[hidden] { display: none !important; }
+
+/* buttons: orange is the main action, cream the second, ghost the quiet one */
+button, a.btn { font: 600 16px/1.2 var(--text); display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 22px; border-radius: 999px; border: 0; background: var(--orange); color: var(--ink); text-decoration: none; cursor: pointer; box-shadow: 0 4px 0 var(--night); }
+button:active, a.btn:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--night); }
+button.cream { background: var(--cream); }
+button.alt { background: rgba(26, 11, 5, .45); color: var(--cream); box-shadow: inset 0 0 0 2px var(--cream); }
+button.alt:active { box-shadow: inset 0 0 0 2px var(--cream); transform: none; }
+button.sm { padding: 9px 16px; font-size: 14px; }
+button.wide { width: 100%; padding: 16px; font-size: 18px; }
+button:disabled { opacity: .4; cursor: default; box-shadow: none; transform: none; }
+button.round { width: 44px; height: 44px; padding: 0; flex: 0 0 auto; background: rgba(26, 11, 5, .55); color: var(--cream); box-shadow: inset 0 0 0 2px var(--cream); }
+button.round.sm { width: 36px; height: 36px; }
+:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+input, textarea { font: 500 16px var(--text); padding: 12px 18px; border-radius: 999px; border: 1px solid var(--glass-line); background: rgba(0, 0, 0, .4); color: var(--cream); min-width: 0; }
+input::placeholder { color: var(--mute); }
+input[type=range] { padding: 0; border: 0; background: none; accent-color: var(--orange); }
+
+.mute { color: var(--mute); } .ok { color: var(--ok); } .bad { color: var(--bad); } .warn { color: var(--gold); }
+.sm { font-size: 13px; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.row.nowrap { flex-wrap: nowrap; }
+.row.nowrap input { flex: 1; min-width: 0; }
+.row.center { justify-content: center; }
+.row.between { justify-content: space-between; }
+.grow { flex: 1; min-width: 0; }
+
+/* the headline face: Henny Penny, gold, with a dark outline and a hard shadow */
+.display { font-family: var(--display); font-weight: 400; line-height: 1; color: var(--gold); -webkit-text-stroke: .12em var(--ink); paint-order: stroke fill; text-shadow: 0 .07em 0 var(--night); }

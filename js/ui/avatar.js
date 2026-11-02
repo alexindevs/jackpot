@@ -1,4 +1,5 @@
 import { esc } from './dom.js';
+import { nameOf, isBot } from '../store.js';
 
 const ok = (c, fallback) => (/^#[0-9a-f]{3,8}$/i.test(c || '') ? c : fallback);
 
@@ -19,9 +20,20 @@ export function avatar(style, size = 40) {
   </svg>`;
 }
 
-// The signed-in player's own card: start.ng's face image when there is one.
+// A player's face with a ring in their team's colour. team: 0 to 4, or undefined for someone with no team yet.
+export function face(style, size = 36, team) {
+  return `<span class="av${team === undefined || team === null ? '' : ' t' + (team % 5)}" style="--s:${size}px">${avatar(style, size)}</span>`;
+}
+
+// The signed-in player's own chip: start.ng's face image when there is one.
 export function profileCard(me) {
   if (!me) return '';
-  const face = me.face ? `<img class="avatar" width="48" height="48" src="${esc(me.face)}" alt="">` : avatar(me.style, 48);
-  return `<div class="profile">${face}<div><div>${esc(me.name || 'Guest')}</div><div class="mute">${me.account ? '@' + esc(me.account) : ''}</div></div></div>`;
+  const pic = me.face ? `<span class="av" style="--s:36px"><img class="avatar" width="36" height="36" src="${esc(me.face)}" alt=""></span>` : face(me.style, 36);
+  return `<div class="chip">${pic}<div class="who-text"><div>${esc(me.name || 'Guest')}</div>${me.account ? `<div class="mute sm">@${esc(me.account)}</div>` : ''}</div></div>`;
+}
+
+// Name with face, for lists. team is optional.
+export function person(s, id, { size = 32, team, tags = '' } = {}) {
+  const bot = isBot(s, id) ? '<span class="tag bot">bot</span>' : '';
+  return `<span class="who">${face((s.profiles[id] || {}).style, size, team)}<span class="nm">${esc(nameOf(s, id))}</span>${bot}${tags}</span>`;
 }
