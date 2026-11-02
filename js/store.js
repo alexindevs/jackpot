@@ -195,6 +195,8 @@ function reduceRoom(s, t, d, num) {
       break;
     case 'team_broken':
       for (const id of [d.a, d.b]) if (r.players[id]) r.players[id].partner = '';
+      // a bot that was there for a person goes when that person breaks the pair
+      for (const id of [d.a, d.b]) if (String(id).startsWith('bot:') && r.phase === 'lobby') { delete r.players[id]; r.order = r.order.filter((x) => x !== id); }
       say(s, 'partnership broken');
       break;
     case 'countdown_started':

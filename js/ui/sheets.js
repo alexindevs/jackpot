@@ -4,6 +4,7 @@ import { esc } from './dom.js';
 import { publicChatLines, teamChatLines, eventLines, signalLines, isPlayer } from './table.js';
 import { gestureListHtml, ideasHtml } from './signals.js';
 import { icon } from './icons.js';
+import { nameOf } from '../store.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -38,7 +39,7 @@ export function renderDock(s, ui, visible) {
     const n = ui.unread[k] || 0;
     return `<button class="dock-item alt" role="menuitem" data-act="sheet" data-kind="${k}"><span class="ic-wrap">${icon[KINDS[k].icon](20)}${n ? `<i class="badge">${n > 9 ? '9+' : n}</i>` : ''}</span><span>${KINDS[k].label}</span></button>`;
   }).join('')}</div>` : '';
-  el.innerHTML = `<button class="round fab" data-act="dock" aria-label="${ui.dockOpen ? 'Close the menu' : 'Open the menu'}" aria-expanded="${!!ui.dockOpen}">${ui.dockOpen ? icon.close() : icon.menu()}${!ui.dockOpen && unread ? `<i class="badge">${unread > 9 ? '9+' : unread}</i>` : ''}</button>${items}`;
+  el.innerHTML = `${items}<button class="round fab" data-act="dock" aria-label="${ui.dockOpen ? 'Close the menu' : 'Open the menu'}" aria-expanded="${!!ui.dockOpen}">${ui.dockOpen ? icon.close() : icon.menu()}${!ui.dockOpen && unread ? `<i class="badge">${unread > 9 ? '9+' : unread}</i>` : ''}</button>`;
 }
 
 // ---- the panel ------------------------------------------------------------------------------------------------
@@ -65,13 +66,17 @@ function build(kind, s, ui) {
     body = '<div class="chat" id="sheet-list"></div>';
     foot = '<div class="row nowrap"><input id="chat-input" class="grow" placeholder="Message your partner" maxlength="500" autocomplete="off" aria-label="Message your partner"><button class="cream" data-act="chat">Send</button></div><div class="mute sm" id="team-hint"></div>';
   } else if (kind === 'signals') {
-    body = `<input id="sig-search" type="search" placeholder="Search ${s.gestures.length} signals" autocomplete="off" aria-label="Search signals"><div id="sheet-list" class="scroll"></div>`;
+    // The table stays visible behind this panel, and what your partner signals and the Jackpot call stay in reach, so
+    // nobody has to close the panel to see a signal or to call.
+    body = `<div class="siglive"><div id="sig-feed" aria-live="polite"></div><button id="sig-jackpot" class="sm" data-act="proclaim">Jackpot!</button></div>
+      <input id="sig-search" type="search" placeholder="Search ${s.gestures.length} signals" autocomplete="off" aria-label="Search signals"><div id="sheet-list" class="scroll"></div>`;
     foot = '<div class="mute sm">Your partner always sees it. Most are seen by the whole table too, and you are not told which.</div>';
   } else if (kind === 'log') {
     body = `<div class="tabs"><button data-act="log-tab" data-tab="events">Events</button><button data-act="log-tab" data-tab="signals">Signals</button></div><div class="chat" id="sheet-list"></div>`;
   } else {
     body = '<div id="sheet-list" class="scroll"></div>';
   }
+  sh.className = 'sheet';
   sh.innerHTML = `<div class="grab" aria-hidden="true"></div><div class="sheet-head"><h3 class="display">${KINDS[kind].title}</h3><button class="round" data-act="sheet-close" aria-label="Close">${icon.close()}</button></div>
     <div class="sheet-body">${body}</div><div class="sheet-foot">${foot}</div>`;
   const search = $('sig-search');
@@ -100,7 +105,8 @@ export function renderSheet(s, ui) {
     return;
   }
   const kind = ui.sheet;
-  if (sh.hidden || builtFor !== kind) { build(kind, s, ui); builtFor = 'fresh'; sh.hidden = false; $('scrim').hidden = false; document.body.classList.add('sheet-open'); }
+  if (sh.hidden || builtFor !== kind) { build(kind, s, ui); builtFor = 'fresh'; sh.hidden = false; document.body.classList.add('sheet-open'); }
+  $('scrim').hidden = true; // no dimming: the table stays whole in the top half
   const list = $('sheet-list');
   if (kind === 'chat') fill(list, publicChatLines(s), true);
   else if (kind === 'team') {
@@ -110,7 +116,17 @@ export function renderSheet(s, ui) {
     if (input) input.disabled = !open;
     if (send) send.disabled = !open;
     if (hint) hint.textContent = open ? '' : 'The team chat opens between rounds. You can read it here during the round.';
-  } else if (kind === 'signals') { if (builtFor === 'fresh') list.innerHTML = gestureListHtml(s.gestures, ui.sigQuery || ''); }
+  } else if (kind === 'signals') {
+    if (builtFor === 'fresh') list.innerHTML = gestureListHtml(s.gestures, ui.sigQuery || '');
+    const g = s.room.game, me = s.me, mine = s.room.players[me];
+    const feed = $('sig-feed'), jp = $('sig-jackpot');
+    if (feed) feed.innerHTML = s.room.signals.slice(-2).map((x) => `<div class="sigline${x.scope === 'team' ? ' private' : ''}"><b>${x.from === me ? 'You' : esc(nameOf(s, x.from))}</b> ${esc(x.text)}</div>`).join('') || '<div class="mute sm">Signals from the table show here.</div>';
+    if (jp && g) {
+      const partner = mine && mine.partner, revoked = g.proclaimRevoked[me];
+      jp.disabled = !(g.phase === 'playing' && partner && !revoked && g.holder !== partner);
+      jp.textContent = revoked ? 'Jackpot locked' : 'Jackpot!';
+    }
+  }
   else if (kind === 'log') {
     const tab = ui.logTab || 'events';
     sh.querySelectorAll('[data-act=log-tab]').forEach((b) => b.classList.toggle('alt', b.dataset.tab !== tab));

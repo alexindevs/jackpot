@@ -52,7 +52,7 @@ body.stage-on #who { display: none; }
 .notice.orange { background: rgba(232, 116, 42, .22); border: 1.5px solid var(--orange); }
 .notice.gold { background: rgba(242, 184, 75, .16); border: 1.5px solid var(--gold); }
 .bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; gap: 12px; padding: 14px 16px calc(14px + var(--safe-b)); background: rgba(26, 11, 5, .94); }
-.bar { flex-wrap: wrap; } .bar button { flex: 1; } .bar .mute { order: 3; flex: 0 0 100%; }
+.bar { flex-wrap: wrap; gap: 10px; } .bar button { flex: 1; } .bar .mute { flex: 0 0 100%; }
 
 /* ---- home ---- */
 .home { position: relative; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding: 0 24px 72px; text-align: center; }
@@ -81,9 +81,14 @@ body.stage-on #who { display: none; }
 .teamcard.open { border: 2px dashed rgba(244, 230, 204, .35); align-items: center; justify-content: center; color: var(--mute); min-height: 90px; }
 .player-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 14px; border-radius: 16px; background: var(--row); }
 .timer-card .label { color: var(--mute); }
-.timer-card .big { font-size: 88px; }
+/* Henny Penny's digits and the outline stand taller than the line box, so give the number room above and below */
+.timer-card .big { font-size: 88px; line-height: 1.25; padding-top: .12em; margin-top: 8px; }
 .glass #invite-link { width: 100%; border-radius: 12px; margin-bottom: 10px; }
 .glass .wide + .wide { margin-top: 10px; }
+.addbots { display: flex; gap: 10px; align-items: stretch; width: 100%; } .addbots button { padding: 16px 20px; font-size: 18px; white-space: nowrap; } .addbots .grow { width: auto; }
+.bar .addbots { flex: 1 1 100%; }
+.bar > button[data-act=start] { flex: 1 1 100%; order: 1; } .bar .mute { order: 2; } .bar .addbots { order: 3; }
+.page.has-bar { padding-bottom: 150px; }
 
 /* ---- cards ---- */
 .card { --cw: 92px; position: relative; display: inline-block; flex: 0 0 auto; width: var(--cw); height: calc(var(--cw) * 1.4); border-radius: 12px; background: #f4e6cc; border: 2px solid #d9c39a; color: #6b1a1f; box-shadow: 0 3px 0 rgba(0, 0, 0, .25); }
@@ -97,8 +102,10 @@ button.card { padding: 0; font: inherit; }
 
 /* ---- the game screen: one screen, no page scroll ---- */
 body.stage-on { overflow: hidden; height: 100dvh; }
-.stage { height: 100dvh; display: flex; flex-direction: column; gap: 10px; padding: 16px clamp(16px, 4vw, 56px) 16px; }
-.topbar { display: flex; align-items: center; gap: 16px; min-height: 48px; padding-right: 60px; }
+.stage { height: 100dvh; display: flex; flex-direction: column; gap: 10px; padding: 16px clamp(16px, 4vw, 56px) 84px; } /* the bottom 84px is for the menu button */
+body.sheet-open .stage { height: 50dvh; padding-bottom: 6px; } /* the panel takes the bottom half; the table stays whole above it */
+body.sheet-open .controls > :not(.prompt) { display: none; }
+.topbar { display: flex; align-items: center; gap: 16px; min-height: 48px; }
 .topbar .display { font-size: clamp(30px, 4vw, 44px); }
 .topbar .display small { font: 500 16px var(--text); -webkit-text-stroke: 0; color: var(--cream); text-shadow: none; margin: 0 6px; }
 .topbar .conn { margin-left: auto; }
@@ -111,7 +118,7 @@ body.stage-on { overflow: hidden; height: 100dvh; }
 .mid { flex: 1; min-height: 0; position: relative; }
 .ring { position: absolute; inset: 0; }
 .oval { position: absolute; left: 14%; right: 14%; top: 16%; bottom: 16%; border-radius: 50%; border: 8px solid #4a2815; background: radial-gradient(ellipse at 50% 45%, rgba(244, 230, 204, .16), transparent 62%), #9a4a1e; box-shadow: 0 0 0 4px #2a140a, 0 20px 40px rgba(0, 0, 0, .45); }
-.centre { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; }
+.centre { position: absolute; left: 50%; top: 64%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; }
 .timer { font-size: clamp(36px, 6vw, 64px); }
 .seat { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 14px; min-width: 96px; background: var(--glass); border: 1px solid var(--glass-line); border-radius: 18px; text-align: center; }
 .seat.holder { border: 3px solid var(--gold); padding: 8px 12px; }
@@ -121,8 +128,8 @@ body.stage-on { overflow: hidden; height: 100dvh; }
 .seat .mini { display: flex; } .seat .mini .card + .card { margin-left: -6px; }
 .suspect { padding: 6px 16px; margin-top: 2px; }
 .ring.dense .seat { padding: 6px 8px; min-width: 0; gap: 2px; } .ring.dense .seat .nm { font-size: 12px; max-width: 70px; } .ring.dense .seat .tag { display: none; } .ring.dense .suspect { padding: 3px 8px; font-size: 11px; }
-.controls { display: flex; flex-direction: column; align-items: center; gap: 8px; padding-bottom: 44px; }
-.me { display: flex; align-items: center; gap: 10px; padding: 5px 14px 5px 6px; border-radius: 999px; background: var(--glass); border: 3px solid var(--gold); }
+.controls { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.you { display: flex; align-items: center; gap: 10px; padding: 5px 14px 5px 6px; border-radius: 999px; background: var(--glass); border: 3px solid var(--gold); }
 .pass { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .passchip { padding: 7px 14px; font-size: 14px; background: rgba(244, 230, 204, .1); color: var(--cream); box-shadow: inset 0 0 0 1.5px rgba(244, 230, 204, .5); }
 .passchip:active { box-shadow: inset 0 0 0 1.5px rgba(244, 230, 204, .5); }
@@ -138,28 +145,33 @@ body.stage-on { overflow: hidden; height: 100dvh; }
 .watching { display: inline-flex; align-items: center; gap: 16px; padding: 8px 10px 8px 22px; background: var(--glass); border: 1px solid var(--glass-line); border-radius: 999px; font-weight: 600; }
 .teampane { flex: 1; min-height: 0; width: min(880px, 100%); align-self: center; display: flex; flex-direction: column; gap: 10px; padding: 20px; margin-bottom: 44px; }
 .teampane h3 { margin: 0; }
-.chat { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 10px; }
+.chat { flex: 1; min-height: 0; overflow: auto; padding: 4px; display: flex; flex-direction: column; gap: 10px; }
 .msg { display: flex; align-items: flex-end; gap: 8px; max-width: 90%; } .msg.me { align-self: flex-end; }
 .bubble { display: flex; flex-direction: column; padding: 8px 12px; border-radius: 16px; background: var(--row); }
 .msg.me .bubble { background: rgba(232, 116, 42, .28); box-shadow: inset 0 0 0 1px rgba(232, 116, 42, .7); }
 .bubble b { font-size: 12px; color: var(--gold); }
+.bubble .tag { align-self: flex-start; margin: 2px 0; }
 .evt { background: var(--row); border-radius: 12px; padding: 8px 12px; font-size: 14px; } .evt.private { color: var(--gold); } .evt.hist { opacity: .65; }
 .resultbox { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; padding-bottom: 44px; }
 .resultbox .display { font-size: clamp(40px, 7vw, 84px); }
 .back-who { display: inline-flex; flex-direction: column; align-items: center; gap: 6px; font-weight: 600; } .back-who.away .av { opacity: .45; }
 .display.timer b { font-weight: inherit; }
+/* the same overlap as the lobby countdown: the digits stand taller than their line box, so keep the label above clear */
+.display.timer { line-height: 1.25; padding-top: .1em; }
 
 /* ---- the menu button and its panels ---- */
-#dock { position: fixed; top: 12px; right: 16px; z-index: 35; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
-.fab { position: relative; }
-.dock-menu { display: flex; flex-direction: column; gap: 6px; padding: 10px; background: var(--glass); border: 1px solid var(--glass-line); border-radius: 18px; }
-.dock-item { justify-content: flex-start; padding: 10px 18px; }
+#dock { position: fixed; left: 0; right: 0; bottom: calc(12px + var(--safe-b)); z-index: 35; display: flex; flex-direction: column; align-items: center; gap: 10px; pointer-events: none; }
+#dock > * { pointer-events: auto; }
+.fab { position: relative; width: 58px; height: 58px; }
+.dock-menu { display: flex; gap: 8px; padding: 10px; background: rgba(26, 11, 5, .94); border: 1px solid var(--glass-line); border-radius: 18px; }
+.dock-item { flex-direction: column; gap: 2px; padding: 8px; min-width: 56px; font-size: 12px; }
 .ic-wrap { position: relative; display: inline-flex; }
 .badge { position: absolute; top: -6px; right: -8px; min-width: 18px; height: 18px; padding: 0 4px; display: grid; place-items: center; border-radius: 9px; background: #ef4444; color: #fff; font-size: 11px; font-style: normal; }
 .fab .badge { top: -2px; right: -2px; }
-#scrim { position: fixed; inset: 0; z-index: 38; background: rgba(26, 11, 5, .5); }
-.sheet { position: fixed; z-index: 40; top: 24px; right: 24px; bottom: 24px; width: 460px; display: flex; flex-direction: column; gap: 12px; padding: 18px 20px; background: rgba(43, 22, 13, .97); border: 1px solid var(--glass-line); border-radius: 24px; }
-.grab { display: none; align-self: center; width: 44px; height: 5px; border-radius: 3px; background: rgba(244, 230, 204, .35); }
+#scrim { display: none; }
+/* the panel comes up from the bottom, half the screen high, on every screen size */
+.sheet { position: fixed; z-index: 40; left: 0; right: 0; bottom: 0; height: 50dvh; max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; padding: 10px 16px calc(14px + var(--safe-b)); background: #2b160d; border: 1px solid var(--glass-line); border-bottom: 0; border-radius: 24px 24px 0 0; box-shadow: 0 -8px 30px rgba(0, 0, 0, .55); }
+.grab { display: block; align-self: center; width: 44px; height: 5px; border-radius: 3px; background: rgba(244, 230, 204, .35); }
 .sheet-head { display: flex; justify-content: space-between; align-items: center; } .sheet-head .display { font-size: 34px; }
 .sheet-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
 .sheet-body .scroll { flex: 1; min-height: 0; overflow: auto; }
@@ -167,6 +179,7 @@ body.stage-on { overflow: hidden; height: 100dvh; }
 .tabs { display: flex; gap: 8px; } .tabs button { padding: 8px 18px; }
 .menu { display: flex; flex-direction: column; gap: 10px; }
 .sheet h4 { margin: 12px 0 6px; color: var(--gold); font-size: 14px; }
+.siglive { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 16px; background: var(--row); } .siglive #sig-feed { flex: 1; min-width: 0; font-size: 14px; display: flex; flex-direction: column; gap: 2px; } .sigline { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .sigline.private { color: var(--gold); } .siglive button { flex: 0 0 auto; }
 .gestures { display: flex; flex-wrap: wrap; gap: 8px; }
 .gesture { background: var(--row); color: var(--cream); box-shadow: inset 0 0 0 1px var(--glass-line); padding: 8px 14px; font-size: 15px; font-weight: 500; }
 .ideas { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
@@ -208,12 +221,12 @@ body.stage-on { overflow: hidden; height: 100dvh; }
   #who { top: 6px; right: 12px; } .status span { display: none; } .status { padding: 13px; }
   #startng { top: 6px; left: 12px; right: auto; bottom: auto; }
   #sound { top: 6px; left: 122px; bottom: auto; padding: 0; background: none; border: 0; } #sound input { display: none; }
-  #dock { top: 52px; right: 12px; }
+  /* one-handed: the menu button is at the bottom, under the thumb, and its list opens upwards */
   .home { padding: 0 16px 56px; } .hero { padding: 0 16px; } .actions { flex-wrap: nowrap; gap: 20px; } .actions button { width: 64px; height: 64px; padding: 0; border-radius: 50%; } .actions button span { display: none; }
   .page { padding: 60px 16px 110px; } .game, .room-card { flex-direction: column; align-items: stretch; gap: 12px; padding: 16px; } .game-info { flex: none; } .code { font-size: 24px; }
   .lobby-grid { grid-template-columns: 1fr; } .timer-card .big { font-size: 64px; }
   .card-center { padding: 28px 20px; }
-  .stage { padding: 52px 12px 12px; gap: 8px; } .topbar { padding-right: 56px; min-height: 44px; } .topbar .display { font-size: 30px; }
+  .stage { padding: 52px 12px 84px; gap: 8px; } .topbar { padding-right: 0; min-height: 44px; } .topbar .display { font-size: 30px; }
   .score { align-self: stretch; padding: 10px 12px; } .score-team .nm { flex: 1; font-size: 13px; max-width: none; } .score .letters { --lw: 18px; --lh: 24px; }
   .seat { padding: 8px; min-width: 76px; } .seat .nm { max-width: 80px; font-size: 14px; } .seat .suspect { padding: 5px 12px; font-size: 13px; }
   /* five or more others do not fit round an oval on a phone: lay them out as a grid instead */
@@ -225,14 +238,20 @@ body.stage-on { overflow: hidden; height: 100dvh; }
   .ring.dense .seat .nm { max-width: 76px; }
   .card.mini { --cw: 22px; } .seat .mini .card + .card { margin-left: -9px; }
   .score .tag { display: none; } .passchip { padding: 6px 10px; font-size: 13px; } .pass { gap: 6px; flex-wrap: nowrap; }
-  .centre { top: 58%; } .centre .mute { font-size: 13px; white-space: nowrap; } .timer { font-size: 40px; }
+  .centre { top: 72%; } .centre .mute { font-size: 13px; white-space: nowrap; } .timer { font-size: 40px; }
   .hand .card { --cw: 74px; } .hand .card + .card { margin-left: -16px; } .opts .card { --cw: 62px; }
-  .controls { padding-bottom: 8px; } .jackpot { width: 100%; }
+  .jackpot { width: 100%; }
   .teampane { margin-bottom: 0; padding: 14px; } .resultbox { padding-bottom: 0; }
-  .sheet { top: auto; left: 0; right: 0; bottom: 0; width: auto; height: 62dvh; border-radius: 26px 26px 0 0; padding-bottom: calc(18px + var(--safe-b)); } .grab { display: block; }
   .modal-backdrop { align-items: flex-end; padding: 0; } .modal { width: 100%; border-radius: 26px 26px 0 0; } .modal-head { padding: 18px 16px 6px; } .modal-body { padding: 8px 16px 24px; }
   .modal-backdrop.soft { align-items: center; padding: 16px; }
   .how { grid-template-columns: 1fr; } .choices { flex-direction: column; } .choice { flex-direction: row; justify-content: space-between; }
   #toast { bottom: 24px; } .banner { padding: 20px 24px; }
 }
+@media (max-width: 360px) { .head { gap: 8px; } .head .display { font-size: 24px; white-space: nowrap; } .head .tag { padding: 3px 8px; } .timer-card .big { font-size: 72px; } }
+/* with the panel open the table has half the screen: make everything on it smaller so nothing overlaps */
+body.sheet-open .score { display: none; } body.sheet-open .topbar { min-height: 32px; } body.sheet-open .topbar .display { font-size: 26px; }
+body.sheet-open .seat { padding: 4px 8px; gap: 1px; min-width: 0; } body.sheet-open .seat .av { --s: 28px; } body.sheet-open .seat .avatar { width: 28px; height: 28px; }
+body.sheet-open .seat .nm { font-size: 12px; max-width: 70px; } body.sheet-open .seat .hearts, body.sheet-open .seat .tag { display: none; } body.sheet-open .suspect { padding: 3px 10px; font-size: 11px; }
+body.sheet-open .centre .mute { font-size: 11px; } body.sheet-open .timer { font-size: 28px; }
+body.sheet-open .ring.dense .seat .av { --s: 24px; }
 @media (prefers-reduced-motion: reduce) { .dots i, .pop { animation: none; } }

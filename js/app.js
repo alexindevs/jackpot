@@ -38,7 +38,7 @@ const ERRORS = {
   nothing_to_add: 'Everyone already has a partner, and there are two teams.', not_a_bot: "That player isn't a bot.", too_many_bots: 'A room can have at most 9 bots.', nothing_to_answer: 'Nothing to answer.', bad_text: 'That message cannot be sent.',
   slow_down: 'Slow down a little.', rate_limited: 'Slow down a little.', closed: 'Not connected.', timeout: 'The server did not answer.',
   already_member: 'You are already in that room.', bad_gesture: "That signal isn't available.", bad_message: 'That could not be sent.', bad_reveal: 'That is not a valid answer.',
-  history_unavailable: 'Your past games are not available right now.', no_such_game: 'That game is no longer saved.', not_in_room: 'You are not in a room.', room_closed: 'That room has closed.', unknown_player: "That player ID doesn't exist.",
+  not_paired: "You don't have a partner to change.", history_unavailable: 'Your past games are not available right now.', no_such_game: 'That game is no longer saved.', not_in_room: 'You are not in a room.', room_closed: 'That room has closed.', unknown_player: "That player ID doesn't exist.",
 };
 
 // An invite link looks like https://jackpot.start.ng/?room=abc123. Remember the room (it has to survive the
@@ -418,6 +418,8 @@ function runAction(d) {
     case 'send-signal': ui.sheet = null; render(); act('signal', { gesture: d.gesture }); break;
     case 'start': act('start_now'); break;
     case 'add-bots': act('add_bots'); break;
+    case 'break-partner': act('break_partner'); break; // lobby only: clears your partnership so you can pick someone else
+    case 'add-bot-team': act('add_bots', { teams: 1 }); break; // one more team of two bots, on top of partners for anyone alone
     case 'remove-bot': act('remove_bot', { player: d.player }); break;
     case 'invite-partner': act('invite_partner', { to: d.to }); break;
     case 'invite-partner-id': if (val('invite-id')) act('invite_partner', { to: val('invite-id') }); break;

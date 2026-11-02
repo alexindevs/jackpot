@@ -57,7 +57,10 @@ export function screenKind(s) {
 // A team's name for popups and banners: "ka & kb"
 export function teamNames(s, team) {
   const r = s.room;
-  return r.order.filter((id) => r.players[id].team === team && r.players[id].partner).map((id) => nameOf(s, id)).join(' & ');
+  // the finished game lists every team's members, even people who left since; before that, everyone still on the team
+  const roster = r.game && r.game.result && r.game.result.teams && r.game.result.teams[team];
+  if (roster) return roster.map((id) => nameOf(s, id)).join(' & ');
+  return r.order.filter((id) => r.players[id].team === team).map((id) => nameOf(s, id)).join(' & ');
 }
 
 export function myTeam(s) {
@@ -68,10 +71,12 @@ export function myTeam(s) {
 export function scoreboard(s) {
   const r = s.room, g = r.game;
   const teams = {};
-  for (const id of r.order) { const p = r.players[id]; if (p.partner) (teams[p.team] = teams[p.team] || []).push(id); }
+  const roster = g.phase === 'over' && g.result && g.result.teams;
+  if (roster) for (const [t, ids] of Object.entries(roster)) teams[t] = ids; // the whole game, as it ended
+  else for (const id of r.order) { const p = r.players[id]; if (p.partner) (teams[p.team] = teams[p.team] || []).push(id); }
   // a removed player who came back on a new team leaves their old partner alone in the old row: drop it
   return '<div class="score">' + Object.keys(teams).filter((t) => teams[t].length > 1).map((t) => {
-    const out = teams[t].every((id) => r.players[id].removed);
+    const out = teams[t].every((id) => !r.players[id] || r.players[id].removed);
     const mine = myTeam(s) === +t;
     const slot = teamSlot(s, +t);
     return `<div class="score-team t${slot}${out ? ' out' : ''}"><i class="dot"></i><span class="nm">${teams[t].map((id) => esc(nameOf(s, id)) + botTag(s, id)).join(' &amp; ')}${mine ? ' (you)' : ''}</span>${letters(g.wins[t] || 0, g.winsToFinish, slot)}</div>`;
@@ -166,7 +171,7 @@ function play(s, ui) {
     <div class="controls">
       ${spectator ? watcherBar(s) : `
         ${forced ? `<div class="prompt forced"><b>You were caught.</b> <span>Pass a card first</span> <span class="display timer">${countdown(timerOf(r, 'forced', me))}</span></div>` : ''}
-        <div class="me t${mineTeam || 0}">${face(styleOf(s, me), 34, mineTeam)}<b>${esc(nameOf(s, me))} (you)</b>${hearts(Math.max(0, g.points[me] || 0), g.suspicionPoints)}${iHold && !forced ? tag('pass one card', 'gold') : ''}</div>
+        <div class="you t${mineTeam || 0}">${face(styleOf(s, me), 34, mineTeam)}<b>${esc(nameOf(s, me))} (you)</b>${hearts(Math.max(0, g.points[me] || 0), g.suspicionPoints)}${iHold && !forced ? tag('pass one card', 'gold') : ''}</div>
         <div class="hand">${handCards(g.hand) || '<span class="mute">no cards</span>'}</div>
         ${(iHold || forced) ? `<div class="pass${forced ? ' urgent' : ''}">${passTypes.map((t) => passChip(t)).join('')}</div>` : `<div class="hint">${esc(hint) || '&nbsp;'}</div>`}
         <button class="wide jackpot" data-act="proclaim" ${canAct && !revoked && !partnerHolds ? '' : 'disabled'}>${revoked ? `Jackpot locked ${countdown(timerOf(r, 'proclaim', me))}` : `Jackpot for ${esc(nameOf(s, partner))}!`}</button>`}

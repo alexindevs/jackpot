@@ -190,7 +190,7 @@ export function lobby(s, ui) {
   for (const i of invitedMe) notices.push(`<div class="notice orange">${person(s, i.from, { size: 36 })}<span>wants you as a partner</span><span class="grow"></span>
       <div class="row nowrap"><button class="sm" data-act="accept" data-from="${esc(i.from)}">Accept</button><button class="sm alt" data-act="decline" data-from="${esc(i.from)}">Decline</button></div></div>`);
 
-  const teamCards = pairs.map(([a, b], i) => `<div class="teamcard t${i % 5}"><div class="mute sm">Team ${i + 1}</div>${person(s, a, { team: i })}${person(s, b, { team: i })}</div>`).join('');
+  const teamCards = pairs.map(([a, b], i) => `<div class="teamcard t${i % 5}"><div class="mute sm">Team ${i + 1}</div>${person(s, a, { team: i })}${person(s, b, { team: i })}${mine && (a === me || b === me) ? `<button class="sm alt" data-act="break-partner"${r.paused ? ' disabled' : ''}>Change partner</button>` : ''}</div>`).join('');
   const rows = unpaired.map((id) => {
     const p = r.players[id];
     const canInvite = mine && !mine.partner && id !== me && !isBot(s, id);
@@ -204,7 +204,7 @@ export function lobby(s, ui) {
   const timer = r.countdownEndsAt
     ? `<div class="label">Game starts in</div><div class="display big"><span data-countdown="${r.countdownEndsAt}">${clock(r.countdownEndsAt - Date.now())}</span></div>`
     : `<div class="label">${r.order.length < 4 ? 'The countdown starts at 4 players.' : 'Waiting for the countdown.'}</div>`;
-  const hostBtns = r.creator === me ? `<button class="wide" data-act="start" ${canStart ? '' : 'disabled'}>Start now</button>${canStart ? '' : '<div class="mute sm center">Needs 2+ teams and everyone paired</div>'}<button class="wide cream" data-act="add-bots" ${r.paused ? 'disabled' : ''}>Add bots</button>` : '';
+  const hostBtns = r.creator === me ? `<button class="wide" data-act="start" ${canStart ? '' : 'disabled'}>Start now</button>${canStart ? '' : '<div class="mute sm center">Needs 2+ teams and everyone paired</div>'}<div class="addbots"><button class="cream grow" data-act="add-bots" ${r.paused ? 'disabled' : ''}>Add bots</button><button class="cream" data-act="add-bot-team" aria-label="Add one more bot team" ${r.paused || r.order.length > 8 ? 'disabled' : ''}>+ Team</button></div>` : '';
 
   return `<main class="page has-bar"><div class="col wide-col">
     <div class="head">${roundBtn('door', 'Leave room', 'data-act="leave"')}<h2 class="display">Room ${esc(r.id)}</h2>${tag(r.short ? 'short' : 'long')}<span class="grow"></span>
