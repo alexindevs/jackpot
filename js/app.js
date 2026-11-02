@@ -15,6 +15,11 @@ import { mountSoundBar } from './ui/soundbar.js';
 
 const root = document.getElementById('app');
 mountSoundBar(document.getElementById('sound'));
+// A player who stays away from a running game drops out with their team, so ask before leaving it for start.ng.
+document.getElementById('startng').addEventListener('click', (e) => {
+  const g = state.room && state.room.game;
+  if (g && g.phase !== 'over' && isPlayer(state) && !confirm("Go back to start.ng? Your team drops out of the game if you don't come back soon.")) e.preventDefault();
+});
 const toastEl = document.getElementById('toast');
 
 const ERRORS = {
