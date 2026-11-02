@@ -2,7 +2,7 @@
 // with no page scrolling. Chat, signals, the log and the menu live in the bottom sheets (see sheets.js).
 import { esc, clock } from './dom.js';
 import { avatar } from './avatar.js';
-import { nameOf } from '../store.js';
+import { nameOf, isBot } from '../store.js';
 import { CARDS, LETTERS } from '../config.js';
 import { shareButton } from './share.js';
 
@@ -17,12 +17,14 @@ const handHtml = (hand) => hand.map((c, t) => (c ? cardChip(t, c) : '')).join(''
 
 // ---- what the sheets show -------------------------------------------------------------------------------------
 
+const botTag = (s, id) => (isBot(s, id) ? ' <span class="tag bot">bot</span>' : '');
+
 export function publicChatLines(s) {
   return s.room.pub.slice(-100).map((m) => `<div><b>${esc(nameOf(s, m.from))}</b> ${esc(m.text)}</div>`).join('') || '<div class="mute">Nothing yet.</div>';
 }
 
 export function teamChatLines(s) {
-  return s.room.chat.map((m) => `<div><b>${esc(nameOf(s, m.from))}</b> ${esc(m.text)}</div>`).join('') || '<div class="mute">Agree a signal with your partner. Only your team sees this chat.</div>';
+  return s.room.chat.map((m) => `<div><b>${esc(nameOf(s, m.from))}</b>${botTag(s, m.from)} ${esc(m.text)}</div>`).join('') || '<div class="mute">Agree a signal with your partner. Only your team sees this chat.</div>';
 }
 
 export function eventLines(s) {
@@ -76,7 +78,7 @@ function scoreboard(s) {
     const w = g.wins[t] || 0;
     const letters = [...LETTERS.slice(0, g.winsToFinish)].map((l, i) => `<i class="${i < w ? 'on' : ''}">${l}</i>`).join('');
     const out = teams[t].every((id) => r.players[id].removed);
-    return `<div class="score-team t${t % 5}${out ? ' out' : ''}"><span class="nm">${teams[t].map((id) => esc(nameOf(s, id))).join(' & ')}</span><span class="letters">${letters}</span></div>`;
+    return `<div class="score-team t${t % 5}${out ? ' out' : ''}"><span class="nm">${teams[t].map((id) => esc(nameOf(s, id)) + botTag(s, id)).join(' &amp; ')}</span><span class="letters">${letters}</span></div>`;
   }).join('') + '</div>';
 }
 
@@ -118,6 +120,7 @@ function seatRing(s, canSuspect, suspecting) {
     const hand = seesAll || id === me ? g.hands[id] || (id === me ? g.hand : null) : null;
     return `<div class="seat t${(p.team || 0) % 5}${id === g.holder ? ' holder' : ''}${p.removed ? ' out' : ''}${id === me ? ' me' : ''}" style="left:${x}%;top:${y}%">
       ${avatar((s.profiles[id] || {}).style, 32)}
+      ${isBot(s, id) ? '<span class="botmark">bot</span>' : ''}
       <div class="nm">${esc(nameOf(s, id))}${id === me ? ' (you)' : ''}</div>
       <div class="mute sm">${pts !== undefined ? '❤'.repeat(Math.max(0, pts)) || '·' : ''}</div>
       ${p.connected === false ? `<div class="bad sm">offline ${countdown(rc)}</div>` : ''}

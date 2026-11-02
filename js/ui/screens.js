@@ -1,8 +1,9 @@
 import { esc, clock } from './dom.js';
 import { avatar, profileCard } from './avatar.js';
-import { nameOf } from '../store.js';
+import { nameOf, isBot } from '../store.js';
 
-const who = (s, id) => `<span class="who">${avatar((s.profiles[id] || {}).style, 28)}<span>${esc(nameOf(s, id))}</span></span>`;
+const botTag = (s, id) => (isBot(s, id) ? '<span class="tag bot">bot</span>' : '');
+const who = (s, id) => `<span class="who">${avatar((s.profiles[id] || {}).style, 28)}<span>${esc(nameOf(s, id))}</span>${botTag(s, id)}</span>`;
 
 export function signIn(ui) {
   const room = ui.pendingRoom();
@@ -48,7 +49,7 @@ function resumeList(s) {
 export function rooms(s, ui) {
   const list = s.rooms.length
     ? s.rooms.map((r) => `<div class="room">
-        <div><b>${esc(r.id)}</b> <span class="tag">${esc(r.phase)}</span><span class="tag">${r.short ? 'short' : 'long'}</span><div class="mute">${r.players} players, ${r.teams} teams, ${r.spectators} watching${r.waiting ? ', ' + r.waiting + ' waiting' : ''}</div></div>
+        <div><b>${esc(r.id)}</b> <span class="tag">${esc(r.phase)}</span><span class="tag">${r.short ? 'short' : 'long'}</span><div class="mute">${r.players} players${r.bots ? ` (${r.bots} bots)` : ''}, ${r.teams} teams, ${r.spectators} watching${r.waiting ? ', ' + r.waiting + ' waiting' : ''}</div></div>
         <div class="row">
           ${r.joinable ? `<button data-act="join" data-room="${esc(r.id)}">Join</button>` : ''}
           <button class="alt" data-act="spectate" data-room="${esc(r.id)}">Watch</button>
@@ -77,13 +78,15 @@ export function lobby(s, ui) {
   const invitedMe = s.invites.partner.filter((i) => i.to === me && i.room === r.id);
   const players = r.order.map((id) => {
     const p = r.players[id];
-    const canInvite = mine && !mine.partner && !p.partner && id !== me;
+    const canInvite = mine && !mine.partner && !p.partner && id !== me && !isBot(s, id);
+    const canRemove = r.creator === me && isBot(s, id) && !r.paused;
     return `<div class="room">
       <div class="row">${who(s, id)}
         ${id === r.creator ? '<span class="tag">host</span>' : ''}${id === me ? '<span class="tag">you</span>' : ''}
         ${p.partner ? `<span class="mute">with ${esc(nameOf(s, p.partner))}</span>` : '<span class="warn">no partner</span>'}
         ${p.connected ? '' : '<span class="bad">offline</span>'}</div>
       ${canInvite ? `<button class="alt" data-act="invite-partner" data-to="${esc(id)}">Ask to team up</button>` : ''}
+      ${canRemove ? `<button class="alt" data-act="remove-bot" data-player="${esc(id)}" aria-label="Remove ${esc(nameOf(s, id))}">Remove</button>` : ''}
     </div>`;
   }).join('');
   const count = r.countdownEndsAt
@@ -103,8 +106,8 @@ export function lobby(s, ui) {
       <div class="row"><button data-act="accept" data-from="${esc(i.from)}">Accept</button><button class="alt" data-act="decline" data-from="${esc(i.from)}">Decline</button></div></div>`).join('')}
     ${players}
     <p class="mute">${r.spectators} watching. Everyone needs a partner when the countdown ends, or they become spectators.</p>
-    ${r.creator === me ? `<button data-act="start" ${canStart ? '' : 'disabled'}>Start now</button>
-      <span class="mute">${canStart ? '' : 'needs 2+ teams and everyone paired'}</span>` : ''}
+    ${r.creator === me ? `<div class="row"><button data-act="start" ${canStart ? '' : 'disabled'}>Start now</button><button class="alt" data-act="add-bots" ${r.paused ? 'disabled' : ''}>Add bots</button>
+      <span class="mute">${canStart ? '' : 'needs 2+ teams and everyone paired'}</span></div>` : ''}
     <div class="row" style="margin-top:12px"><input id="invite-id" placeholder="player id to invite" size="16" autocomplete="off">
       <button class="alt" data-act="invite-room">Invite to room</button>${mine && !mine.partner ? '<button class="alt" data-act="invite-partner-id">Ask as partner</button>' : ''}</div>
   </section>`;

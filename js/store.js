@@ -19,6 +19,8 @@ function say(s, text) {
 }
 
 export const nameOf = (s, id) => (s.profiles[id] && s.profiles[id].name) || id;
+// A bot's id starts with "bot:" and the snapshot marks it with bot: true. The id check also covers the lobby messages, which carry no flag.
+export const isBot = (s, id) => String(id).startsWith('bot:') || !!(s.room && s.room.players[id] && s.room.players[id].bot);
 
 function newRoom(id) {
   return {
@@ -176,7 +178,7 @@ function reduceRoom(s, t, d, num) {
   const r = s.room;
   switch (t) {
     case 'member_joined':
-      if (!r.players[d.player]) { r.players[d.player] = { id: d.player, connected: true, partner: '', ready: false, removed: false, team: 0 }; r.order.push(d.player); }
+      if (!r.players[d.player]) { r.players[d.player] = { id: d.player, connected: true, partner: '', ready: false, removed: false, team: 0, bot: String(d.player).startsWith('bot:') }; r.order.push(d.player); }
       say(s, nameOf(s, d.player) + ' joined');
       break;
     case 'member_left':

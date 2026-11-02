@@ -31,7 +31,8 @@ const ERRORS = {
   not_holder: 'You do not hold the passing card.', no_such_card: "You don't have that card.", no_points: 'No suspicion points left.',
   self_suspect: "You can't suspect yourself.", busy: 'Someone is already answering a suspicion.', bad_reveal: 'That is not a valid answer.',
   proclaim_revoked: "You can't call Jackpot yet.", partner_holds_passing_card: 'Your partner is holding the passing card.',
-  game_over: 'The game is over.', paused: 'The game is paused.', nothing_to_answer: 'Nothing to answer.', bad_text: 'That message cannot be sent.',
+  game_over: 'The game is over.', paused: 'The game is paused.',
+  nothing_to_add: 'Everyone already has a partner, and there are two teams.', not_a_bot: "That player isn't a bot.", too_many_bots: 'A room can have at most 9 bots.', nothing_to_answer: 'Nothing to answer.', bad_text: 'That message cannot be sent.',
   slow_down: 'Slow down a little.', rate_limited: 'Slow down a little.', closed: 'Not connected.', timeout: 'The server did not answer.',
 };
 
@@ -396,6 +397,8 @@ function runAction(d) {
     case 'over-stay': if (ui.over) ui.over.stay = true; render(); break;
     case 'send-signal': ui.sheet = null; render(); act('signal', { gesture: d.gesture }); break;
     case 'start': act('start_now'); break;
+    case 'add-bots': act('add_bots'); break;
+    case 'remove-bot': act('remove_bot', { player: d.player }); break;
     case 'invite-partner': act('invite_partner', { to: d.to }); break;
     case 'invite-partner-id': if (val('invite-id')) act('invite_partner', { to: val('invite-id') }); break;
     case 'invite-room': if (val('invite-id')) act('invite_room', { to: val('invite-id') }); break;

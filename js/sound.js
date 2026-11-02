@@ -190,7 +190,7 @@ export function cueFor(m, c) {
   switch (m.t) {
     case 'chat_message': return d.from !== c.me ? 'chatPublic' : null;
     case 'team_chat_message': return c.player && d.from !== c.me ? 'chatTeam' : null;
-    case 'member_joined': return c.lobby && d.player !== c.me ? 'joined' : null;
+    case 'member_joined': return c.lobby && d.player !== c.me && !String(d.player).startsWith('bot:') ? 'joined' : null; // bots arrive in a rush: no chime
     case 'game_starting': return 'gameStarting';
     case 'signal': return c.player && d.from !== c.me ? 'signal' : null;
     case 'game_event':
