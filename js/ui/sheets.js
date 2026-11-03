@@ -7,6 +7,7 @@ import { icon } from './icons.js';
 import { nameOf } from '../store.js';
 
 const $ = (id) => document.getElementById(id);
+let dockWasOpen = false; // the dock is rebuilt on every redraw, so only a menu that has just opened animates
 
 const KINDS = {
   chat: { icon: 'chat', label: 'Chat', title: 'Public chat' },
@@ -32,13 +33,14 @@ function available(s) {
 
 export function renderDock(s, ui, visible) {
   const el = $('dock');
-  if (!visible || ui.sheet) { el.hidden = true; el.innerHTML = ''; return; }
+  if (!visible || ui.sheet) { el.hidden = true; el.innerHTML = ''; dockWasOpen = false; return; }
   el.hidden = false;
   const unread = (ui.unread.chat || 0) + (ui.unread.team || 0);
-  const items = ui.dockOpen ? `<div class="dock-menu" role="menu">${available(s).map((k) => {
+  const items = ui.dockOpen ? `<div class="dock-menu${dockWasOpen ? '' : ' in'}" role="menu">${available(s).map((k) => {
     const n = ui.unread[k] || 0;
     return `<button class="dock-item alt" role="menuitem" data-act="sheet" data-kind="${k}"><span class="ic-wrap">${icon[KINDS[k].icon](20)}${n ? `<i class="badge">${n > 9 ? '9+' : n}</i>` : ''}</span><span>${KINDS[k].label}</span></button>`;
   }).join('')}</div>` : '';
+  dockWasOpen = !!ui.dockOpen;
   el.innerHTML = `${items}<button class="round fab" data-act="dock" aria-label="${ui.dockOpen ? 'Close the menu' : 'Open the menu'}" aria-expanded="${!!ui.dockOpen}">${ui.dockOpen ? icon.close() : icon.menu()}${!ui.dockOpen && unread ? `<i class="badge">${unread > 9 ? '9+' : unread}</i>` : ''}</button>`;
 }
 
@@ -105,7 +107,7 @@ export function renderSheet(s, ui) {
     return;
   }
   const kind = ui.sheet;
-  if (sh.hidden || builtFor !== kind) { build(kind, s, ui); builtFor = 'fresh'; sh.hidden = false; document.body.classList.add('sheet-open'); }
+  if (sh.hidden || builtFor !== kind) { build(kind, s, ui); builtFor = 'fresh'; sh.hidden = false; sh.classList.add('up'); document.body.classList.add('sheet-open'); }
   $('scrim').hidden = true; // no dimming: the table stays whole in the top half
   const list = $('sheet-list');
   if (kind === 'chat') fill(list, publicChatLines(s), true);
@@ -145,6 +147,7 @@ export function popup(html, cls = '') {
   el.innerHTML = html;
   box.append(el);
   while (box.children.length > 2) box.firstChild.remove();
+  setTimeout(() => el.classList.add('out'), 3300);
   setTimeout(() => el.remove(), 3600);
 }
 

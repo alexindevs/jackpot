@@ -1,5 +1,6 @@
 // "How to play" modal. Built once and kept outside #app, so room updates never reset its scroll position.
 import { icon } from './icons.js';
+import { appear } from './motion.js';
 
 const SECTIONS = [
   ['The goal', 'Play in a team of two. Collect <b>four cards of the same type</b>, then let your partner know. Your partner shouts <b>"Jackpot"</b> for you. Each round you win earns your team the next letter of <b>J-A-C-K-P-O-T</b> (<b>J-A-C-K</b> in a short game). The first team to spell it wins.'],
@@ -49,6 +50,7 @@ export function openGuide() {
   </div>`;
   overlay.addEventListener('click', (e) => { if (e.target === overlay || e.target.closest('[data-close]')) closeGuide(); });
   document.body.append(overlay);
+  appear(overlay);
   document.addEventListener('keydown', onKey, true);
   overlay.querySelector('[data-close]').focus();
 }

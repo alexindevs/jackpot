@@ -275,4 +275,26 @@ body.sheet-open .seat { padding: 4px 8px; gap: 1px; min-width: 0; } body.sheet-o
 body.sheet-open .seat .nm { font-size: 12px; max-width: 70px; } body.sheet-open .seat .hearts, body.sheet-open .seat .tag { display: none; } body.sheet-open .suspect { padding: 3px 10px; font-size: 11px; }
 body.sheet-open .centre .mute { font-size: 11px; } body.sheet-open .timer { font-size: 28px; }
 body.sheet-open .ring.dense .seat .av { --s: 24px; }
-@media (prefers-reduced-motion: reduce) { .dots i, .pop { animation: none; } }
+
+/* ---- motion: what is built once. Redrawn parts (screens, dialogs, cards, letters) are in js/ui/motion.js ---- */
+button, a.btn, .passchip { transition: transform .12s, box-shadow .12s, background-color .15s, filter .15s, opacity .15s; }
+@media (hover: hover) { button:not(:disabled):hover, a.btn:hover { filter: brightness(1.08); } }
+.sheet.up { animation: sheet-up .32s cubic-bezier(.2, .8, .2, 1); }
+@keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+.dock-menu.in { animation: dock-in .24s cubic-bezier(.2, .8, .2, 1); transform-origin: bottom center; }
+@keyframes dock-in { from { opacity: 0; transform: translateY(14px) scale(.94); } to { opacity: 1; transform: none; } }
+.pop.out { opacity: 0; transform: translateY(-6px); transition: opacity .3s, transform .3s; }
+.banner:not([hidden]) { animation: banner-in .4s cubic-bezier(.2, 1.2, .3, 1); }
+@keyframes banner-in { from { opacity: 0; transform: translateX(-50%) scale(.85); } to { opacity: 1; transform: translateX(-50%); } }
+.overlay:not([hidden]) { animation: fade-in .3s ease-out; }
+.overlay > * { animation: rise .45s cubic-bezier(.2, .8, .2, 1) backwards; }
+.overlay > :nth-child(2) { animation-delay: .08s; } .overlay > :nth-child(3) { animation-delay: .16s; } .overlay > :nth-child(4) { animation-delay: .24s; }
+.overlay .result-icon { animation-name: trophy; animation-duration: .7s; }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes rise { from { opacity: 0; transform: translateY(16px); } }
+@keyframes trophy { from { opacity: 0; transform: scale(.4) rotate(-12deg); } 60% { transform: scale(1.15) rotate(3deg); } }
+#toast:not([hidden]) { animation: rise .25s ease-out; }
+.fan .card { animation: deal .5s cubic-bezier(.2, .8, .2, 1) backwards; } .fan .card:nth-child(2) { animation-delay: .1s; } .fan .card:nth-child(3) { animation-delay: .2s; }
+@keyframes deal { from { opacity: 0; translate: 0 -30px; } }
+
+@media (prefers-reduced-motion: reduce) { *, ::before, ::after { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }

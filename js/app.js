@@ -14,6 +14,7 @@ import { cueFor, play } from './sound.js';
 import { mountSoundBar } from './ui/soundbar.js';
 import { mountScenery } from './ui/scenery.js';
 import { icon } from './ui/icons.js';
+import { snap, animate } from './ui/motion.js';
 
 const root = document.getElementById('app');
 mountScenery();
@@ -288,13 +289,16 @@ function render() {
   // keep what the player is typing across redraws
   const a = document.activeElement;
   const keep = a && a.id && root.contains(a) ? { id: a.id, value: a.value, start: a.selectionStart, end: a.selectionEnd } : null;
+  const was = snap(root);
   root.innerHTML = view() + (ui.dialog === 'leave' || ui.dialog === 'startng' ? screens.confirmDialog(ui.dialog) : '');
   document.getElementById('who').innerHTML = token() && !ui.blocked ? screens.shell(state, ui) : '';
   document.body.classList.toggle('stage-on', game);
   document.body.dataset.view = game ? 'game' : (!token() || !state.me || ui.blocked ? 'plain' : state.room ? 'lobby' : ui.page);
   // a different screen starts at the top (the old layout kept its scroll position into the next screen)
   const key = game ? screenKind(state) : (state.room ? 'lobby' : 'other:' + ui.page);
-  if (key !== lastScreen) { lastScreen = key; window.scrollTo(0, 0); }
+  const changed = key !== lastScreen;
+  if (changed) { lastScreen = key; window.scrollTo(0, 0); }
+  animate(root, was, changed);
   if (!game) { ui.sheet = null; ui.dockOpen = false; }
   if (ui.sheet === 'ideas' && screenKind(state) !== 'chat') ui.sheet = null; // the ideas only belong to the chat between rounds
   renderDock(state, ui, game);
@@ -337,7 +341,10 @@ function renderOverlay() {
   if (phase === 'count') {
     const left = Math.max(0, 3 - Math.floor((t - 4000) / 1000));
     const c = document.getElementById('over-count');
-    if (c) c.textContent = left;
+    if (c && c.textContent !== String(left)) {
+      c.textContent = left;
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) c.animate([{ scale: '1.3', opacity: .4 }, { scale: '1', opacity: 1 }], { duration: 400, easing: 'ease-out' });
+    }
     if (t >= 7000) { ui.over = null; leaveRoom(); }
   }
 }

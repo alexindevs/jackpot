@@ -1,6 +1,7 @@
 // "Create room" opens this: pick the game length, and the room is created. The letters say what each length means.
 import { icon } from './icons.js';
 import { letters } from './parts.js';
+import { appear } from './motion.js';
 
 let overlay = null, lastFocus = null;
 
@@ -40,6 +41,7 @@ export function openNewRoom(onPick) {
     else if (e.target === overlay || e.target.closest('[data-close]')) close();
   });
   document.body.append(overlay);
+  appear(overlay);
   document.addEventListener('keydown', onKey, true);
   overlay.querySelector('[data-short]').focus();
 }
