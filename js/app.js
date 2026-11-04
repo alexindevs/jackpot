@@ -3,7 +3,7 @@ import { Net } from './net.js';
 import { initial, reduce, applyMissed, expireLockouts, nameOf } from './store.js';
 import { serverUrl, serverOverride, devName } from './config.js';
 import { readSession, clearSession, signInUrl, connectPage, sessionExpiresAt, refreshSession } from './startng.js';
-import { clock, esc } from './ui/dom.js';
+import { clock, esc, morph } from './ui/dom.js';
 import * as screens from './ui/screens.js';
 import { table, screenKind, isPlayer, teamNames, myTeam } from './ui/table.js';
 import { openGuide } from './ui/guide.js';
@@ -290,7 +290,12 @@ function render() {
   const a = document.activeElement;
   const keep = a && a.id && root.contains(a) ? { id: a.id, value: a.value, start: a.selectionStart, end: a.selectionEnd } : null;
   const was = snap(root);
-  root.innerHTML = view() + (ui.dialog === 'leave' || ui.dialog === 'startng' ? screens.confirmDialog(ui.dialog) : '');
+  const html = view() + (ui.dialog === 'leave' || ui.dialog === 'startng' ? screens.confirmDialog(ui.dialog) : '');
+  if (keep) { // rebuilding the field under a typing player closes the phone keyboard and drops what is being composed
+    const next = document.createElement('div');
+    next.innerHTML = html;
+    morph(root, next);
+  } else root.innerHTML = html;
   document.getElementById('who').innerHTML = token() && !ui.blocked ? screens.shell(state, ui) : '';
   document.body.classList.toggle('stage-on', game);
   document.body.dataset.view = game ? 'game' : (!token() || !state.me || ui.blocked ? 'plain' : state.room ? 'lobby' : ui.page);
@@ -305,9 +310,9 @@ function render() {
   renderSheet(state, ui);
   renderOverlay();
   root.querySelectorAll('[data-stick]').forEach((el) => { el.scrollTop = el.scrollHeight; });
-  if (keep) {
+  if (keep) { // the field itself survived the redraw; only bring it back if the screen changed under it
     const el = document.getElementById(keep.id);
-    if (el) { el.value = keep.value; el.focus(); try { el.setSelectionRange(keep.start, keep.end); } catch { /* not a text field */ } }
+    if (el && el !== a) { el.value = keep.value; el.focus(); try { el.setSelectionRange(keep.start, keep.end); } catch { /* not a text field */ } }
   }
 }
 
@@ -466,9 +471,15 @@ function runAction(d) {
 }
 for (const id of ['app', 'dock', 'sheet', 'overlay', 'banner', 'scrim']) document.getElementById(id).addEventListener('click', onAction);
 
-// the table lays its seats out differently on a phone, so draw again when the window changes size
-let resizeT = null;
-window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(render, 150); });
+// the table lays its seats out by width, so draw again when the width changes. Height alone must not redraw: an on-screen
+// keyboard resizes the window every time it opens, grows or switches layout, and each redraw restarted the keyboard
+let resizeT = null, lastWidth = window.innerWidth;
+window.addEventListener('resize', () => {
+  if (window.innerWidth === lastWidth) return;
+  lastWidth = window.innerWidth;
+  clearTimeout(resizeT);
+  resizeT = setTimeout(render, 150);
+});
 
 // Escape closes the dialog or panel on top
 document.addEventListener('keydown', (e) => {
@@ -484,7 +495,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 setInterval(() => {
-  root.querySelectorAll('[data-countdown]').forEach((el) => { el.textContent = clock(+el.dataset.countdown - Date.now()); });
+  root.querySelectorAll('[data-countdown]').forEach((el) => { const t = clock(+el.dataset.countdown - Date.now()); if (el.textContent !== t) el.textContent = t; }); // untouched text means no DOM churn next to a field being typed in
   if (expireLockouts(state)) render();
 }, 500);
 
