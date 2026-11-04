@@ -178,7 +178,7 @@ function play(s, ui) {
         <div class="you t${mineTeam || 0}">${face(styleOf(s, me), 34, mineTeam)}<b>${esc(nameOf(s, me))} (you)</b>${hearts(Math.max(0, g.points[me] || 0), g.suspicionPoints)}${iHold && !forced ? tag('pass one card', 'gold') : ''}</div>
         <div class="hand">${handCards(g.hand) || '<span class="mute">no cards</span>'}</div>
         ${(iHold || forced) ? `<div class="pass${forced ? ' urgent' : ''}">${passTypes.map((t) => passChip(t)).join('')}</div>` : `<div class="hint">${esc(hint) || '&nbsp;'}</div>`}
-        <button class="wide jackpot" data-act="proclaim" ${canAct && !revoked && !partnerHolds ? '' : 'disabled'}>${revoked ? `Jackpot locked ${countdown(timerOf(r, 'proclaim', me))}` : `Jackpot for ${esc(nameOf(s, partner))}!`}</button>`}
+        <button class="wide jackpot" data-act="proclaim" ${canAct && !revoked && !partnerHolds && !ui.proclaiming ? '' : 'disabled'}>${revoked ? `Jackpot locked ${countdown(timerOf(r, 'proclaim', me))}` : ui.proclaiming ? '…' : `Jackpot for ${esc(nameOf(s, partner))}!`}</button>`}
     </div>
     ${spectator ? '' : revealPrompt(g, ui, r)}
   </div>`;

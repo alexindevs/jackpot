@@ -125,8 +125,8 @@ export function renderSheet(s, ui) {
     if (feed) feed.innerHTML = s.room.signals.slice(-2).map((x) => `<div class="sigline${x.scope === 'team' ? ' private' : ''}"><b>${x.from === me ? 'You' : esc(nameOf(s, x.from))}</b> ${esc(x.text)}</div>`).join('') || '<div class="mute sm">Signals from the table show here.</div>';
     if (jp && g) {
       const partner = mine && mine.partner, revoked = g.proclaimRevoked[me];
-      jp.disabled = !(g.phase === 'playing' && partner && !revoked && g.holder !== partner);
-      jp.textContent = revoked ? 'Jackpot locked' : 'Jackpot!';
+      jp.disabled = !(g.phase === 'playing' && partner && !revoked && g.holder !== partner) || ui.proclaiming;
+      jp.textContent = revoked ? 'Jackpot locked' : ui.proclaiming ? '…' : 'Jackpot!';
     }
   }
   else if (kind === 'log') {

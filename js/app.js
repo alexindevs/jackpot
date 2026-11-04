@@ -82,7 +82,7 @@ function inviteLink(roomId) {
 }
 
 let state = initial();
-const ui = { page: 'home', dialog: null, sheet: null, dockOpen: false, unread: { chat: 0, team: 0 }, logTab: 'events', sigQuery: '', over: null, inviteLink, guest: guestArrival, pendingRoom, inviteNotice: null, retryIn: 0, sel: [], suspecting: null, status: 'closed', identity: null, notice: null, blocked: false, signInUrl: signInUrl() };
+const ui = { page: 'home', dialog: null, sheet: null, dockOpen: false, unread: { chat: 0, team: 0 }, logTab: 'events', sigQuery: '', over: null, inviteLink, guest: guestArrival, pendingRoom, inviteNotice: null, retryIn: 0, sel: [], suspecting: null, proclaiming: false, status: 'closed', identity: null, notice: null, blocked: false, signInUrl: signInUrl() };
 const dev = devName();
 let session = dev ? null : readSession();
 const token = () => (dev ? 'dev:' + dev : session);
@@ -453,7 +453,13 @@ function runAction(d) {
         : gameText(res && !res.draw && res.winner !== undefined ? teamNames(state, res.winner) : '', scoreOf({ ...(res && res.wins), ...g.wins }), res)); // every team, so a 4-0 game does not read '4'
       break;
     }
-    case 'proclaim': act('proclaim'); break;
+    case 'proclaim': { // a wrong call costs a point, and each tap is a new request with its own key: lock until the server answers
+      if (ui.proclaiming) break;
+      ui.proclaiming = true;
+      render();
+      act('proclaim').finally(() => { ui.proclaiming = false; render(); });
+      break;
+    }
     case 'vote-end': act('vote_end', { agree: d.agree === 'true' }); break;
     case 'ready': act('ready', { ready: d.ready === 'true' }); break;
     case 'pubchat': { const v = val('pub-input'); if (v) { act('chat', { text: v }).then((m) => { if (m) document.getElementById('pub-input').value = ''; }); } break; }
