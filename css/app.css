@@ -253,7 +253,7 @@ body.sheet-open .controls > :not(.prompt) { display: none; }
   .ring.dense .seat { position: static; transform: none; width: auto; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; text-align: center; }
   .ring.dense .seat .av { --s: 28px !important; } .ring.dense .seat .avatar { width: 28px; height: 28px; }
   .ring.dense.ten { --cols: 5; gap: 4px; } .ring.dense.ten .seat { padding: 5px 2px; } .ring.dense.ten .seat .nm { font-size: 11px; max-width: 62px; } .ring.dense.ten .seat .suspect { padding: 3px 7px; font-size: 10px; } .ring.dense.ten .seat .hearts svg { width: 9px; height: 9px; }
-  .ring.dense .seat .nm { font-size: 12px; max-width: 84px; } .ring.dense .seat .hearts svg { width: 11px; height: 11px; }
+  .ring.dense .seat .nm { font-size: 12px; max-width: 84px; align-self: center; } .ring.dense .seat .hearts { align-self: center; } .ring.dense .seat .hearts svg { width: 11px; height: 11px; }
   .ring.dense .seat .suspect { padding: 4px 10px; font-size: 11px; margin: 0; }
   .score.many { grid-template-columns: 1fr; gap: 4px; padding: 8px 10px; } .score.many .score-team .nm { font-size: 12px; max-width: none; } .score.many .letters { --lw: 15px; --lh: 20px; } .score.many .letters i { font-size: 10px; }
   .stage:has(.ring.dense) .hand .card { --cw: 58px; } .stage:has(.ring.dense) .hand .card + .card { margin-left: -14px; } .stage:has(.ring.dense) .controls { gap: 5px; } .stage:has(.ring.dense) { gap: 6px; }
@@ -267,6 +267,33 @@ body.sheet-open .controls > :not(.prompt) { display: none; }
   .modal-backdrop.soft { align-items: center; padding: 16px; }
   .how { grid-template-columns: 1fr; } .choices { flex-direction: column; } .choice { flex-direction: row; justify-content: space-between; }
   #toast { bottom: 24px; } .banner { padding: 20px 24px; }
+}
+/* small phones (320 wide): the game screen has to fit in about 568px, so everything is a size down, the scoreboard is
+   tighter; below 360 the Jackpot button also sits beside your name instead of under your cards */
+@media (max-width: 374px) {
+  .stage { padding: 36px 10px 58px; gap: 5px; } .topbar { min-height: 28px; } .topbar .display { font-size: 22px; }
+  .ring.dense .seat { padding: 2px 2px; gap: 0; border-radius: 14px; } .ring.dense .seat .av { --s: 22px !important; } .ring.dense .seat .avatar { width: 22px; height: 22px; }
+  .ring.dense .seat .nm, .ring.dense.ten .seat .nm { font-size: 10.5px; line-height: 1.15; }
+  .ring.dense .seat .suspect, .ring.dense.ten .seat .suspect { padding: 2px 6px; font-size: 9.5px; } .ring.dense .seat .hearts svg, .ring.dense.ten .seat .hearts svg { width: 9px; height: 9px; }
+  .ring:not(.dense) .seat { padding: 4px 6px; min-width: 64px; gap: 1px; } .ring:not(.dense) .seat .av { --s: 28px !important; } .ring:not(.dense) .seat .avatar { width: 28px; height: 28px; }
+  .ring:not(.dense) .seat .nm { font-size: 12px; max-width: 70px; } .ring:not(.dense) .seat .hearts svg { width: 10px; height: 10px; } .ring:not(.dense) .seat .tag { font-size: 9px; padding: 1px 7px; }
+  .ring:not(.dense) .seat .suspect { padding: 3px 9px; font-size: 11px; margin-top: 1px; }
+  .stage:has(.ring.dense) .hand .card, .hand .card { --cw: 50px; } .stage:has(.ring.dense) .hand .card + .card, .hand .card + .card { margin-left: -12px; }
+  .prompt.forced { flex-wrap: nowrap; gap: 8px; padding: 4px 12px; font-size: 13px; } .prompt.forced > b { display: none; } .prompt.forced .timer { font-size: 20px; }
+  .stage .hint { min-height: 0; font-size: 12px; } .stage .hint:empty { display: none; }
+  .ring.dense .centre { gap: 8px; } .ring.dense .timer, .timer { font-size: 22px; }
+}
+@media (max-width: 359px) {
+  .you .av, .you .avatar { --s: 26px !important; width: 26px; height: 26px; } .you .hearts svg { width: 11px; height: 11px; }
+  .controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 8px; align-items: center; justify-items: center; }
+  .controls > * { grid-column: 1 / -1; }
+  .controls > .you { grid-column: 1; grid-row: 1; justify-self: start; min-width: 0; max-width: 100%; padding-right: 10px; } .you b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+  .controls > .jackpot { grid-column: 2; grid-row: 1; width: auto; padding: 9px 11px; font-size: 13px; white-space: nowrap; }
+  .you .tag { display: none; } /* the pass buttons already say what to do */
+  .controls:has(.prompt.forced) > .you { display: none; } /* the countdown matters more while you are caught */
+  .controls:has(.prompt.forced) > .jackpot { grid-column: 1 / -1; grid-row: 2; width: 100%; }
+  .score, .score.many { padding: 4px 8px; gap: 0; border-radius: 12px; } .score-team { gap: 5px; } .score-team .nm, .score.many .score-team .nm { font-size: 10.5px; line-height: 1.2; }
+  .score .letters, .score.many .letters { --lw: 11px; --lh: 14px; } .score .letters i, .score.many .letters i { font-size: 8px; }
 }
 @media (max-width: 360px) { .head { gap: 8px; } .head .display { font-size: 24px; white-space: nowrap; } .head .tag { padding: 3px 8px; } .timer-card .big { font-size: 72px; } }
 /* with the panel open the table has half the screen: make everything on it smaller so nothing overlaps */

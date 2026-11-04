@@ -114,7 +114,10 @@ function seatRing(s, canSuspect, suspecting) {
   const hold = timerOf(r, 'hold');
   const holder = g.holder ? (g.holder === me ? 'You hold' : `${esc(nameOf(s, g.holder))} holds`) : '';
   const centre = g.holder ? `<div class="centre"><div class="mute">${holder} the passing card</div>${hold ? `<div class="display timer">${countdown(hold)}</div>` : ''}</div>` : '';
-  return `<div class="ring${n > 5 ? ' dense' : ''}${n > 7 ? ' ten' : ''}"><div class="oval"></div>${centre}` + ring.map((id, i) => {
+  // below 360px wide there is no room for an oval, so the seats are always the grid. From 360 to 374 four players still
+  // sit round the oval, with compact seats (css/app.css).
+  const dense = n > 5 || window.innerWidth < 360;
+  return `<div class="ring${dense ? ' dense' : ''}${n > 7 ? ' ten' : ''}"><div class="oval"></div>${centre}` + ring.map((id, i) => {
     if (id === me && r.players[me]) return '';
     const p = r.players[id] || {};
     const a = (Math.PI / 2) + ((i - mi + n) % n) * 2 * Math.PI / n;
