@@ -82,7 +82,7 @@ function inviteLink(roomId) {
 }
 
 let state = initial();
-const ui = { page: 'home', dialog: null, sheet: null, dockOpen: false, unread: { chat: 0, team: 0 }, logTab: 'events', sigQuery: '', over: null, inviteLink, guest: guestArrival, pendingRoom, inviteNotice: null, retryIn: 0, sel: [], suspecting: null, proclaiming: false, status: 'closed', identity: null, notice: null, blocked: false, signInUrl: signInUrl() };
+const ui = { page: 'home', dialog: null, sheet: null, dockOpen: false, unread: { chat: 0, team: 0 }, logTab: 'events', sigQuery: '', over: null, inviteLink, guest: guestArrival, pendingRoom, inviteNotice: null, retryIn: 0, sel: [], suspecting: null, proclaiming: false, jackpotFrom: 0, status: 'closed', identity: null, notice: null, blocked: false, signInUrl: signInUrl() };
 const dev = devName();
 let session = dev ? null : readSession();
 const token = () => (dev ? 'dev:' + dev : session);
@@ -215,6 +215,8 @@ net.addEventListener('message', (e) => {
   if (e.detail.t === 'partner_invite' && e.detail.d.to === state.me) toast(nameOf(state, e.detail.d.from) + ' wants you as a partner');
   if (e.detail.t === 'room_invite') toast(nameOf(state, e.detail.d.from) + ' invited you to a room');
   if (e.detail.t === 'game_event' && (e.detail.kind === 'suspicion_failed' || e.detail.kind === 'suspicion_freed')) ui.sel = [];
+  // the table replaces the chat screen under the player's thumb, so a tap meant for Ready can land on Jackpot
+  if (e.detail.t === 'game_event' && e.detail.kind === 'round_started') { ui.jackpotFrom = Date.now() + 3000; setTimeout(render, 3000); }
   render();
 });
 
